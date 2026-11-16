@@ -289,3 +289,274 @@
                                     return (
                                         <div 
                                             key={challenge.id}
+                                            onClick={() => setSelectedChallenge(challenge)}
+                                            className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer relative overflow-hidden group">
+                                            
+                                            <div className="flex items-start justify-between mb-2">
+                                                <div className="flex items-center space-x-3">
+                                                    <div className="text-3xl bg-gray-50 w-12 h-12 rounded-2xl flex items-center justify-center border border-gray-100">
+                                                        {challenge.emoji}
+                                                    </div>
+                                                    <div>
+                                                        <h3 className="font-bold text-dark text-base">{challenge.title}</h3>
+                                                        <div className="flex items-center space-x-2 mt-0.5">
+                                                            <span className="text-[11px] bg-gray-100 text-gray-600 px-2 py-0.5 rounded-md font-medium">
+                                                                Realizuje: <b>{challenge.auditedBy}</b>
+                                                            </span>
+                                                            <span className="text-[11px] bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-md font-medium">
+                                                                Audytor: <b>{challenge.auditor}</b>
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div className="text-right">
+                                                    <span className="text-sm font-extrabold text-primary">{greenDays} / {challenge.duration}</span>
+                                                    <p className="text-[10px] text-gray-400 font-semibold">dni</p>
+                                                </div>
+                                            </div>
+
+                                            <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden mt-3">
+                                                <div 
+                                                    className="bg-gradient-to-r from-primary to-secondary h-full rounded-full transition-all duration-500" 
+                                                    style={{ width: `${Math.min(progressPercent, 100)}%` }}>
+                                                </div>
+                                            </div>
+
+                                            <div className="flex space-x-1 mt-3 overflow-x-auto pb-1">
+                                                {Array.from({ length: challenge.duration }).map((_, idx) => {
+                                                    const dayNum = idx + 1;
+                                                    const log = challenge.logs[dayNum];
+                                                    let bg = 'bg-gray-100 border-gray-200';
+                                                    if (log) {
+                                                        if (log.status === 'green') bg = 'bg-emerald-400 border-emerald-500 text-white';
+                                                        else if (log.status === 'yellow') bg = 'bg-amber-400 border-amber-500 text-white';
+                                                        else if (log.status === 'red') bg = 'bg-rose-400 border-rose-500 text-white';
+                                                        else if (log.status === 'blue') bg = 'bg-blue-400 border-blue-500 text-white';
+                                                    }
+                                                    return (
+                                                        <div key={idx} className={`w-6 h-6 rounded-lg text-[10px] font-bold flex items-center justify-center border flex-shrink-0 ${bg}`}>
+                                                            {dayNum}
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    );
+                                })
+                            )}
+                        </div>
+
+                    </div>
+
+                    {/* DOLNY PASEK */}
+                    <div className="bg-white border-t border-gray-100 py-3 px-6 flex justify-around items-center absolute bottom-0 left-0 right-0 z-10 shadow-lg">
+                        <button onClick={() => { setActiveTab('active'); setSelectedChallenge(null); }} className="flex flex-col items-center text-primary">
+                            <span className="text-xl">🏠</span>
+                            <span className="text-[10px] font-bold mt-1">Celomat</span>
+                        </button>
+                        <button onClick={() => setShowCreateModal(true)} className="flex flex-col items-center text-gray-400 hover:text-primary transition-colors">
+                            <span className="text-xl">➕</span>
+                            <span className="text-[10px] font-medium mt-1">Nowy Cel</span>
+                        </button>
+                    </div>
+
+                    {/* MODAL SZCZEGÓŁÓW */}
+                    {selectedChallenge && activeLogDay === null && (
+                        <div className="absolute inset-0 bg-black bg-opacity-40 z-30 flex flex-col justify-end backdrop-blur-xs animate-fadeIn">
+                            <div className="bg-white rounded-t-[32px] p-6 max-h-[90vh] overflow-y-auto shadow-2xl flex flex-col">
+                                
+                                <div className="flex justify-between items-center mb-4">
+                                    <div className="flex items-center space-x-3">
+                                        <span className="text-3xl">{selectedChallenge.emoji}</span>
+                                        <div>
+                                            <h2 className="font-extrabold text-xl text-dark">{selectedChallenge.title}</h2>
+                                            <p className="text-xs text-gray-400">Tryb: {selectedChallenge.mode === 'streak' ? 'Ciągły (Streak)' : 'Suma dni'}</p>
+                                        </div>
+                                    </div>
+                                    <button 
+                                        onClick={() => setSelectedChallenge(null)}
+                                        className="w-8 h-8 rounded-full bg-gray-100 text-gray-500 flex items-center justify-center font-bold">
+                                        ✕
+                                    </button>
+                                </div>
+
+                                <h4 className="font-bold text-sm text-dark mb-2">Siatka Postępów ({selectedChallenge.duration} dni)</h4>
+                                <div className="grid grid-cols-5 gap-2 mb-6">
+                                    {Array.from({ length: selectedChallenge.duration }).map((_, idx) => {
+                                        const dayNum = idx + 1;
+                                        const log = selectedChallenge.logs[dayNum];
+                                        let bg = 'bg-gray-50 border-gray-200 text-dark';
+                                        let icon = '';
+                                        if (log) {
+                                            if (log.status === 'green') { bg = 'bg-emerald-500 border-emerald-600 text-white'; icon = '✓'; }
+                                            else if (log.status === 'yellow') { bg = 'bg-amber-400 border-amber-500 text-white'; icon = '⚡'; }
+                                            else if (log.status === 'red') { bg = 'bg-rose-500 border-rose-600 text-white'; icon = '✕'; }
+                                            else if (log.status === 'blue') { bg = 'bg-blue-400 border-blue-500 text-white'; icon = '💤'; }
+                                        }
+
+                                        const canAudit = currentProfile === selectedChallenge.auditor;
+
+                                        return (
+                                            <div 
+                                                key={idx}
+                                                onClick={() => {
+                                                    if (canAudit) {
+                                                        setActiveLogDay(dayNum);
+                                                        const existing = selectedChallenge.logs[dayNum] || {};
+                                                        setAuditStatus(existing.status || 'green');
+                                                        setAuditNote(existing.note || '');
+                                                        
+                                                        // Poprawione ładowanie zaznaczonych kryteriów
+                                                        const checks = {};
+                                                        if (existing.checked && Array.isArray(existing.checked)) {
+                                                            existing.checked.forEach((val, i) => { checks[i] = val; });
+                                                        } else {
+                                                            selectedChallenge.criteria.forEach((_, i) => { checks[i] = false; });
+                                                        }
+                                                        setAuditCheckedCriteria(checks);
+                                                    }
+                                                }}
+                                                className={`p-3 rounded-2xl border flex flex-col items-center justify-center transition-all ${bg} ${canAudit ? 'cursor-pointer hover:opacity-90 active:scale-95 shadow-xs' : 'opacity-90'}`}>
+                                                <span className="text-xs font-bold">Dzień {dayNum}</span>
+                                                <span className="text-lg font-extrabold mt-0.5">{icon}</span>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+
+                                {currentProfile === selectedChallenge.auditor && (
+                                    <p className="text-[11px] text-indigo-600 font-medium bg-indigo-50 p-2.5 rounded-xl text-center mb-4">
+                                        💡 Kliknij w dowolny kafelek powyżej, aby edytować lub wyczyścić ocenę dnia.
+                                    </p>
+                                )}
+
+                                <div className="bg-gray-50 p-4 rounded-2xl mb-6 border border-gray-100">
+                                    <h4 className="font-bold text-xs text-gray-500 uppercase tracking-wider mb-2">Kryteria oceny</h4>
+                                    <ul className="space-y-1.5 text-xs text-gray-700">
+                                        {selectedChallenge.criteria.map((c, i) => (
+                                            <li key={i} className="flex items-center space-x-2">
+                                                <span className="w-1.5 h-1.5 rounded-full bg-primary"></span>
+                                                <span>{c}</span>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+
+                                <div className="border-t border-gray-100 pt-4 mt-auto">
+                                    <h4 className="font-bold text-sm text-dark mb-3">Strefa Kibica i Wsparcia 💬</h4>
+                                    <div className="space-y-2 max-h-36 overflow-y-auto mb-3">
+                                        {selectedChallenge.cheers.length === 0 ? (
+                                            <p className="text-xs text-gray-400 italic">Brak wiadomości.</p>
+                                        ) : (
+                                            selectedChallenge.cheers.map(ch => (
+                                                <div key={ch.id} className="bg-gray-50 p-2.5 rounded-xl border border-gray-100">
+                                                    <div className="flex justify-between items-center mb-1">
+                                                        <span className="font-bold text-xs text-indigo-600">{ch.author}</span>
+                                                        <span className="text-[10px] text-gray-400">{ch.time}</span>
+                                                    </div>
+                                                    <p className="text-xs text-dark">{ch.text}</p>
+                                                </div>
+                                            ))
+                                        )}
+                                    </div>
+
+                                    <div className="flex space-x-2">
+                                        <input 
+                                            type="text"
+                                            placeholder="Napisz wiadomość..."
+                                            value={newCheerText}
+                                            onChange={(e) => setNewCheerText(e.target.value)}
+                                            className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-primary"
+                                        />
+                                        <button 
+                                            onClick={() => addCheer(selectedChallenge.id)}
+                                            className="bg-secondary text-white px-4 py-2 rounded-xl text-xs font-bold shadow-sm">
+                                            Wyślij
+                                        </button>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+                    )}
+
+                    {/* MODAL AUDYTU / EDYCJI DNIA */}
+                    {activeLogDay !== null && selectedChallenge && (
+                        <div className="absolute inset-0 bg-black bg-opacity-50 z-40 flex flex-col justify-end backdrop-blur-xs animate-fadeIn">
+                            <div className="bg-white rounded-t-[32px] p-6 max-h-[90vh] overflow-y-auto shadow-2xl flex flex-col">
+                                <div className="flex justify-between items-center mb-4">
+                                    <h3 className="font-extrabold text-lg text-dark">Audyt / Edycja: Dzień {activeLogDay}</h3>
+                                    <button onClick={() => setActiveLogDay(null)} className="w-8 h-8 rounded-full bg-gray-100 text-gray-500 flex items-center justify-center font-bold">✕</button>
+                                </div>
+
+                                <label className="text-xs font-bold text-gray-600 mb-2 block">Status dnia:</label>
+                                <div className="grid grid-cols-2 gap-2 mb-4">
+                                    <button 
+                                        onClick={() => setAuditStatus('green')}
+                                        className={`py-2.5 px-3 rounded-xl text-xs font-bold border flex items-center justify-center space-x-2 ${auditStatus === 'green' ? 'bg-emerald-500 text-white border-emerald-600 shadow' : 'bg-white text-gray-600 border-gray-200'}`}>
+                                        <span>🟢 Zaliczone</span>
+                                    </button>
+                                    <button 
+                                        onClick={() => setAuditStatus('yellow')}
+                                        className={`py-2.5 px-3 rounded-xl text-xs font-bold border flex items-center justify-center space-x-2 ${auditStatus === 'yellow' ? 'bg-amber-400 text-white border-amber-500 shadow' : 'bg-white text-gray-600 border-gray-200'}`}>
+                                        <span>🟡 Warunkowe</span>
+                                    </button>
+                                    <button 
+                                        onClick={() => setAuditStatus('red')}
+                                        className={`py-2.5 px-3 rounded-xl text-xs font-bold border flex items-center justify-center space-x-2 ${auditStatus === 'red' ? 'bg-rose-500 text-white border-rose-600 shadow' : 'bg-white text-gray-600 border-gray-200'}`}>
+                                        <span>🔴 Niezaliczone</span>
+                                    </button>
+                                    <button 
+                                        onClick={() => setAuditStatus('blue')}
+                                        className={`py-2.5 px-3 rounded-xl text-xs font-bold border flex items-center justify-center space-x-2 ${auditStatus === 'blue' ? 'bg-blue-400 text-white border-blue-500 shadow' : 'bg-white text-gray-600 border-gray-200'}`}>
+                                        <span>🔵 Dzień pauzy</span>
+                                    </button>
+                                </div>
+
+                                <label className="text-xs font-bold text-gray-600 mb-2 block">Spełnione kryteria (możesz odznaczyć):</label>
+                                <div className="space-y-2 mb-4">
+                                    {selectedChallenge.criteria.map((criterion, idx) => (
+                                        <label key={idx} className="flex items-center space-x-3 bg-gray-50 p-3 rounded-xl border border-gray-100 cursor-pointer">
+                                            <input 
+                                                type="checkbox"
+                                                checked={!!auditCheckedCriteria[idx]}
+                                                onChange={(e) => setAuditCheckedCriteria({...auditCheckedCriteria, [idx]: e.target.checked})}
+                                                className="w-4 h-4 accent-primary rounded"
+                                            />
+                                            <span className="text-xs font-medium text-dark">{criterion}</span>
+                                        </label>
+                                    ))}
+                                </div>
+
+                                <label className="text-xs font-bold text-gray-600 mb-1 block">Notatka:</label>
+                                <textarea 
+                                    value={auditNote}
+                                    onChange={(e) => setAuditNote(e.target.value)}
+                                    placeholder="Wpisz komentarz..."
+                                    className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-xs focus:outline-none focus:border-primary mb-4 h-20 resize-none"
+                                />
+
+                                <div className="flex space-x-2">
+                                    <button 
+                                        onClick={clearAuditDay}
+                                        className="w-1/3 bg-gray-100 hover:bg-gray-200 text-gray-600 py-3.5 rounded-2xl font-bold text-xs transition-transform active:scale-95">
+                                        Wyczyść dzień 🗑️
+                                    </button>
+                                    <button 
+                                        onClick={saveAudit}
+                                        className="w-2/3 bg-primary hover:bg-opacity-90 text-white py-3.5 rounded-2xl font-bold text-sm shadow-md transition-transform active:scale-95">
+                                        Zapisz zmiany
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                </div>
+            );
+        }
+
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+</body>
+</html>
