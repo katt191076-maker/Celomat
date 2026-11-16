@@ -49,8 +49,8 @@
     <script type="text/babel">
         function App() {
             const [currentProfile, setCurrentProfile] = React.useState('Mama');
-            const [activeTab, setActiveTab] = React.useState('active'); // active, completed
-            const [filterView, setFilterView] = React.useState('all'); // all, mine, assigned
+            const [activeTab, setActiveTab] = React.useState('active');
+            const [filterView, setFilterView] = React.useState('all');
             
             const [challenges, setChallenges] = React.useState([
                 {
@@ -58,7 +58,7 @@
                     title: 'Nowa suszarka',
                     emoji: '💇‍♀️',
                     duration: 14,
-                    mode: 'streak', // streak lub accumulate
+                    mode: 'streak',
                     type: 'audited', 
                     auditedBy: 'Córka',
                     auditor: 'Mama',
@@ -66,10 +66,7 @@
                     status: 'active',
                     logs: {
                         1: { status: 'green', note: 'Świetny początek!', checked: [true, true, true, true] },
-                        2: { status: 'green', note: 'Super porządek', checked: [true, true, true, true] },
-                        3: { status: 'red', note: 'Zostawione ubrania na fotelu', checked: [true, false, true, true] },
-                        4: { status: 'green', note: 'Poprawione wzorowo', checked: [true, true, true, true] },
-                        5: { status: 'blue', note: 'Dzień wyjazdu - pauza', checked: [] }
+                        2: { status: 'green', note: 'Super porządek', checked: [true, true, true, true] }
                     },
                     cheers: [
                         { id: 1, author: 'Mama', text: 'Bądź grzeczna, suszarka czeka! 🔥', time: 'Wczoraj 20:15' }
@@ -81,7 +78,6 @@
             const [selectedChallenge, setSelectedChallenge] = React.useState(null);
             const [activeLogDay, setActiveLogDay] = React.useState(null);
             
-            // Stany formularza nowego wyzwania
             const [newTitle, setNewTitle] = React.useState('');
             const [newEmoji, setNewEmoji] = React.useState('🎯');
             const [newDuration, setNewDuration] = React.useState(14);
@@ -90,22 +86,14 @@
             const [newAuditor, setNewAuditor] = React.useState('Mama');
             const [newCriteria, setNewCriteria] = React.useState(['Kryterium 1', 'Kryterium 2']);
 
-            // Stan edycji audytu dnia
             const [auditStatus, setAuditStatus] = React.useState('green');
             const [auditNote, setAuditNote] = React.useState('');
             const [auditCheckedCriteria, setAuditCheckedCriteria] = React.useState({});
-
-            // Stan kibicowania
             const [newCheerText, setNewCheerText] = React.useState('');
 
-            // Efekt fajerwerków po zakończeniu
             const triggerFireworks = () => {
                 if (typeof confetti === 'function') {
-                    confetti({
-                        particleCount: 150,
-                        spread: 80,
-                        origin: { y: 0.6 }
-                    });
+                    confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } });
                 }
             };
 
@@ -139,22 +127,19 @@
 
                 const updatedChallenges = challenges.map(c => {
                     if (c.id === selectedChallenge.id) {
-                        let updatedLogs = {
-                            ...c.logs,
-                            [activeLogDay]: {
-                                status: auditStatus,
-                                note: auditNote,
-                                checked: selectedChallenge.criteria.map((_, idx) => !!auditCheckedCriteria[idx])
-                            }
+                        let updatedLogs = { ...c.logs };
+                        
+                        updatedLogs[activeLogDay] = {
+                            status: auditStatus,
+                            note: auditNote,
+                            checked: selectedChallenge.criteria.map((_, idx) => !!auditCheckedCriteria[idx])
                         };
 
-                        // Obsługa trybu ciągłego (Streak): w przypadku dnia czerwonego wydłużamy siatkę o 1 dzień
                         let currentDuration = c.duration;
                         if (c.mode === 'streak' && auditStatus === 'red') {
                             currentDuration += 1;
                         }
 
-                        // Sprawdzenie czy wyzwanie zostało ukończone
                         let greenCount = 0;
                         for(let i=1; i<=currentDuration; i++) {
                             if(updatedLogs[i] && updatedLogs[i].status === 'green') greenCount++;
@@ -167,6 +152,26 @@
                         }
 
                         const updated = { ...c, duration: currentDuration, logs: updatedLogs, status: newStatus };
+                        setSelectedChallenge(updated);
+                        return updated;
+                    }
+                    return c;
+                });
+
+                setChallenges(updatedChallenges);
+                setActiveLogDay(null);
+            };
+
+            // Funkcja do czyszczenia/usuwania wpisu z danego dnia
+            const clearAuditDay = () => {
+                if (!selectedChallenge || activeLogDay === null) return;
+
+                const updatedChallenges = challenges.map(c => {
+                    if (c.id === selectedChallenge.id) {
+                        let updatedLogs = { ...c.logs };
+                        delete updatedLogs[activeLogDay]; // Usunięcie wpisu dla tego dnia
+
+                        const updated = { ...c, logs: updatedLogs };
                         setSelectedChallenge(updated);
                         return updated;
                     }
@@ -192,7 +197,6 @@
                 setNewCheerText('');
             };
 
-            // Filtrowanie wyzwań
             const filteredChallenges = challenges.filter(c => {
                 const matchesTab = activeTab === 'active' ? c.status === 'active' : c.status === 'completed';
                 if (!matchesTab) return false;
@@ -208,7 +212,7 @@
             return (
                 <div className="flex flex-col h-full bg-gray-50">
                     
-                    {/* GÓRNY PASEK STATUSU / PROFILU */}
+                    {/* GÓRNY PASEK */}
                     <div className="bg-white px-5 py-4 border-b border-gray-100 flex items-center justify-between shadow-sm z-10">
                         <div className="flex items-center space-x-3">
                             <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-primary to-accent flex items-center justify-center text-white text-xl shadow-md">
@@ -220,7 +224,6 @@
                             </div>
                         </div>
 
-                        {/* Przełącznik profilu (Mama / Córka) */}
                         <div className="flex bg-gray-100 p-1 rounded-full border border-gray-200">
                             <button 
                                 onClick={() => setCurrentProfile('Mama')}
@@ -238,7 +241,6 @@
                     {/* ZAWARTOŚĆ GŁÓWNA */}
                     <div className="flex-1 overflow-y-auto p-4 pb-24">
                         
-                        {/* ZAKŁADKI I FILTRY */}
                         <div className="flex items-center justify-between mb-4">
                             <div className="flex space-x-2">
                                 <button 
@@ -260,7 +262,6 @@
                             </button>
                         </div>
 
-                        {/* FILTRY WIDOKU */}
                         <div className="flex space-x-2 mb-4 overflow-x-auto pb-1 text-xs">
                             <button onClick={() => setFilterView('all')} className={`px-3 py-1.5 rounded-lg font-medium whitespace-nowrap ${filterView === 'all' ? 'bg-indigo-50 text-indigo-600 border border-indigo-200' : 'bg-white text-gray-500 border border-gray-200'}`}>
                                 Wszystkie
@@ -273,13 +274,11 @@
                             </button>
                         </div>
 
-                        {/* LISTA WYZWAŃ */}
                         <div className="space-y-3">
                             {filteredChallenges.length === 0 ? (
                                 <div className="text-center py-12 bg-white rounded-3xl border border-dashed border-gray-200 p-6">
                                     <div className="text-4xl mb-2">📭</div>
                                     <p className="text-gray-500 font-medium text-sm">Brak wyzwań w tej zakładce.</p>
-                                    <p className="text-gray-400 text-xs mt-1">Stwórz nowe wyzwanie przyciskiem „+” powyżej.</p>
                                 </div>
                             ) : (
                                 filteredChallenges.map(challenge => {
@@ -290,381 +289,3 @@
                                     return (
                                         <div 
                                             key={challenge.id}
-                                            onClick={() => setSelectedChallenge(challenge)}
-                                            className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer relative overflow-hidden group">
-                                            
-                                            <div className="flex items-start justify-between mb-2">
-                                                <div className="flex items-center space-x-3">
-                                                    <div className="text-3xl bg-gray-50 w-12 h-12 rounded-2xl flex items-center justify-center border border-gray-100">
-                                                        {challenge.emoji}
-                                                    </div>
-                                                    <div>
-                                                        <h3 className="font-bold text-dark text-base">{challenge.title}</h3>
-                                                        <div className="flex items-center space-x-2 mt-0.5">
-                                                            <span className="text-[11px] bg-gray-100 text-gray-600 px-2 py-0.5 rounded-md font-medium">
-                                                                Realizuje: <b>{challenge.auditedBy}</b>
-                                                            </span>
-                                                            <span className="text-[11px] bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-md font-medium">
-                                                                Audytor: <b>{challenge.auditor}</b>
-                                                            </span>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <div className="text-right">
-                                                    <span className="text-sm font-extrabold text-primary">{greenDays} / {challenge.duration}</span>
-                                                    <p className="text-[10px] text-gray-400 font-semibold">dni</p>
-                                                </div>
-                                            </div>
-
-                                            {/* Pasek postępu */}
-                                            <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden mt-3">
-                                                <div 
-                                                    className="bg-gradient-to-r from-primary to-secondary h-full rounded-full transition-all duration-500" 
-                                                    style={{ width: `${Math.min(progressPercent, 100)}%` }}>
-                                                </div>
-                                            </div>
-
-                                            {/* Mini podgląd kafelków na liście */}
-                                            <div className="flex space-x-1 mt-3 overflow-x-auto pb-1">
-                                                {Array.from({ length: challenge.duration }).map((_, idx) => {
-                                                    const dayNum = idx + 1;
-                                                    const log = challenge.logs[dayNum];
-                                                    let bg = 'bg-gray-100 border-gray-200';
-                                                    if (log) {
-                                                        if (log.status === 'green') bg = 'bg-emerald-400 border-emerald-500 text-white';
-                                                        else if (log.status === 'yellow') bg = 'bg-amber-400 border-amber-500 text-white';
-                                                        else if (log.status === 'red') bg = 'bg-rose-400 border-rose-500 text-white';
-                                                        else if (log.status === 'blue') bg = 'bg-blue-400 border-blue-500 text-white';
-                                                    }
-                                                    return (
-                                                        <div key={idx} className={`w-6 h-6 rounded-lg text-[10px] font-bold flex items-center justify-center border flex-shrink-0 ${bg}`}>
-                                                            {dayNum}
-                                                        </div>
-                                                    );
-                                                })}
-                                            </div>
-                                        </div>
-                                    );
-                                })
-                            )}
-                        </div>
-
-                    </div>
-
-                    {/* DOLNY PASEK NAWIGACYJNY */}
-                    <div className="bg-white border-t border-gray-100 py-3 px-6 flex justify-around items-center absolute bottom-0 left-0 right-0 z-10 shadow-lg">
-                        <button onClick={() => { setActiveTab('active'); setSelectedChallenge(null); }} className="flex flex-col items-center text-primary">
-                            <span className="text-xl">🏠</span>
-                            <span className="text-[10px] font-bold mt-1">Celomat</span>
-                        </button>
-                        <button onClick={() => setShowCreateModal(true)} className="flex flex-col items-center text-gray-400 hover:text-primary transition-colors">
-                            <span className="text-xl">➕</span>
-                            <span className="text-[10px] font-medium mt-1">Nowy Cel</span>
-                        </button>
-                    </div>
-
-                    {/* MODAL SZCZEGÓŁÓW WYZWANIA */}
-                    {selectedChallenge && activeLogDay === null && (
-                        <div className="absolute inset-0 bg-black bg-opacity-40 z-30 flex flex-col justify-end backdrop-blur-xs animate-fadeIn">
-                            <div className="bg-white rounded-t-[32px] p-6 max-h-[90vh] overflow-y-auto shadow-2xl flex flex-col">
-                                
-                                <div className="flex justify-between items-center mb-4">
-                                    <div className="flex items-center space-x-3">
-                                        <span className="text-3xl">{selectedChallenge.emoji}</span>
-                                        <div>
-                                            <h2 className="font-extrabold text-xl text-dark">{selectedChallenge.title}</h2>
-                                            <p className="text-xs text-gray-400">Tryb: {selectedChallenge.mode === 'streak' ? 'Ciągły (Streak)' : 'Suma dni'}</p>
-                                        </div>
-                                    </div>
-                                    <button 
-                                        onClick={() => setSelectedChallenge(null)}
-                                        className="w-8 h-8 rounded-full bg-gray-100 text-gray-500 flex items-center justify-center font-bold">
-                                        ✕
-                                    </button>
-                                </div>
-
-                                {selectedChallenge.status === 'completed' && (
-                                    <div className="bg-gradient-to-r from-amber-50 to-amber-100 border border-amber-200 p-4 rounded-2xl mb-4 text-center">
-                                        <div className="text-3xl mb-1">🎉</div>
-                                        <h3 className="font-bold text-amber-800 text-sm">Wyzwanie ukończone sukcesem!</h3>
-                                        <p className="text-xs text-amber-600 mt-0.5">Nagroda odblokowana! Oklaski dla {selectedChallenge.auditedBy}!</p>
-                                    </div>
-                                )}
-
-                                <h4 className="font-bold text-sm text-dark mb-2">Siatka Postępów ({selectedChallenge.duration} dni)</h4>
-                                <div className="grid grid-cols-5 gap-2 mb-6">
-                                    {Array.from({ length: selectedChallenge.duration }).map((_, idx) => {
-                                        const dayNum = idx + 1;
-                                        const log = selectedChallenge.logs[dayNum];
-                                        let bg = 'bg-gray-50 border-gray-200 text-dark';
-                                        let icon = '';
-                                        if (log) {
-                                            if (log.status === 'green') { bg = 'bg-emerald-500 border-emerald-600 text-white'; icon = '✓'; }
-                                            else if (log.status === 'yellow') { bg = 'bg-amber-400 border-amber-500 text-white'; icon = '⚡'; }
-                                            else if (log.status === 'red') { bg = 'bg-rose-500 border-rose-600 text-white'; icon = '✕'; }
-                                            else if (log.status === 'blue') { bg = 'bg-blue-400 border-blue-500 text-white'; icon = '💤'; }
-                                        }
-
-                                        const canAudit = currentProfile === selectedChallenge.auditor;
-
-                                        return (
-                                            <div 
-                                                key={idx}
-                                                onClick={() => {
-                                                    if (canAudit) {
-                                                        setActiveLogDay(dayNum);
-                                                        const existing = selectedChallenge.logs[dayNum] || {};
-                                                        setAuditStatus(existing.status || 'green');
-                                                        setAuditNote(existing.note || '');
-                                                        const checks = {};
-                                                        if (existing.checked) {
-                                                            existing.checked.forEach((val, i) => checks[i] = val);
-                                                        }
-                                                        setAuditCheckedCriteria(checks);
-                                                    }
-                                                }}
-                                                className={`p-3 rounded-2xl border flex flex-col items-center justify-center transition-all ${bg} ${canAudit ? 'cursor-pointer hover:opacity-90 active:scale-95 shadow-xs' : 'opacity-90'}`}>
-                                                <span className="text-xs font-bold">Dzień {dayNum}</span>
-                                                <span className="text-lg font-extrabold mt-0.5">{icon}</span>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-
-                                {currentProfile === selectedChallenge.auditor && (
-                                    <p className="text-[11px] text-indigo-600 font-medium bg-indigo-50 p-2.5 rounded-xl text-center mb-4">
-                                        💡 Kliknij w dowolny kafelek powyżej, aby ocenić dzień jako Audytor ({currentProfile}).
-                                    </p>
-                                )}
-
-                                {/* Kryteria wyzwania */}
-                                <div className="bg-gray-50 p-4 rounded-2xl mb-6 border border-gray-100">
-                                    <h4 className="font-bold text-xs text-gray-500 uppercase tracking-wider mb-2">Kryteria oceny</h4>
-                                    <ul className="space-y-1.5 text-xs text-gray-700">
-                                        {selectedChallenge.criteria.map((c, i) => (
-                                            <li key={i} className="flex items-center space-x-2">
-                                                <span className="w-1.5 h-1.5 rounded-full bg-primary"></span>
-                                                <span>{c}</span>
-                                            </li>
-                                        ))}
-                                    </ul>
-                                </div>
-
-                                {/* STREFA KIBICOWANIA */}
-                                <div className="border-t border-gray-100 pt-4 mt-auto">
-                                    <h4 className="font-bold text-sm text-dark mb-3">Strefa Kibica i Wsparcia 💬</h4>
-                                    <div className="space-y-2 max-h-36 overflow-y-auto mb-3">
-                                        {selectedChallenge.cheers.length === 0 ? (
-                                            <p className="text-xs text-gray-400 italic">Brak wiadomości. Napisz coś miłego jako pierwszy!</p>
-                                        ) : (
-                                            selectedChallenge.cheers.map(ch => (
-                                                <div key={ch.id} className="bg-gray-50 p-2.5 rounded-xl border border-gray-100">
-                                                    <div className="flex justify-between items-center mb-1">
-                                                        <span className="font-bold text-xs text-indigo-600">{ch.author}</span>
-                                                        <span className="text-[10px] text-gray-400">{ch.time}</span>
-                                                    </div>
-                                                    <p className="text-xs text-dark">{ch.text}</p>
-                                                </div>
-                                            ))
-                                        )}
-                                    </div>
-
-                                    <div className="flex space-x-2">
-                                        <input 
-                                            type="text"
-                                            placeholder="Napisz wspierającą wiadomość..."
-                                            value={newCheerText}
-                                            onChange={(e) => setNewCheerText(e.target.value)}
-                                            className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-primary"
-                                        />
-                                        <button 
-                                            onClick={() => addCheer(selectedChallenge.id)}
-                                            className="bg-secondary text-white px-4 py-2 rounded-xl text-xs font-bold shadow-sm">
-                                            Wyślij
-                                        </button>
-                                    </div>
-                                </div>
-
-                            </div>
-                        </div>
-                    )}
-
-                    {/* MODAL AUDYTU DNIA */}
-                    {activeLogDay !== null && selectedChallenge && (
-                        <div className="absolute inset-0 bg-black bg-opacity-50 z-40 flex flex-col justify-end backdrop-blur-xs animate-fadeIn">
-                            <div className="bg-white rounded-t-[32px] p-6 max-h-[90vh] overflow-y-auto shadow-2xl flex flex-col">
-                                <div className="flex justify-between items-center mb-4">
-                                    <h3 className="font-extrabold text-lg text-dark">Audyt: Dzień {activeLogDay}</h3>
-                                    <button onClick={() => setActiveLogDay(null)} className="w-8 h-8 rounded-full bg-gray-100 text-gray-500 flex items-center justify-center font-bold">✕</button>
-                                </div>
-
-                                <label className="text-xs font-bold text-gray-600 mb-2 block">Status dnia:</label>
-                                <div className="grid grid-cols-2 gap-2 mb-4">
-                                    <button 
-                                        onClick={() => setAuditStatus('green')}
-                                        className={`py-2.5 px-3 rounded-xl text-xs font-bold border flex items-center justify-center space-x-2 ${auditStatus === 'green' ? 'bg-emerald-500 text-white border-emerald-600 shadow' : 'bg-white text-gray-600 border-gray-200'}`}>
-                                        <span>🟢 Zaliczone</span>
-                                    </button>
-                                    <button 
-                                        onClick={() => setAuditStatus('yellow')}
-                                        className={`py-2.5 px-3 rounded-xl text-xs font-bold border flex items-center justify-center space-x-2 ${auditStatus === 'yellow' ? 'bg-amber-400 text-white border-amber-500 shadow' : 'bg-white text-gray-600 border-gray-200'}`}>
-                                        <span>🟡 Warunkowe</span>
-                                    </button>
-                                    <button 
-                                        onClick={() => setAuditStatus('red')}
-                                        className={`py-2.5 px-3 rounded-xl text-xs font-bold border flex items-center justify-center space-x-2 ${auditStatus === 'red' ? 'bg-rose-500 text-white border-rose-600 shadow' : 'bg-white text-gray-600 border-gray-200'}`}>
-                                        <span>🔴 Niezaliczone</span>
-                                    </button>
-                                    <button 
-                                        onClick={() => setAuditStatus('blue')}
-                                        className={`py-2.5 px-3 rounded-xl text-xs font-bold border flex items-center justify-center space-x-2 ${auditStatus === 'blue' ? 'bg-blue-400 text-white border-blue-500 shadow' : 'bg-white text-gray-600 border-gray-200'}`}>
-                                        <span>🔵 Dzień pauzy</span>
-                                    </button>
-                                </div>
-
-                                <label className="text-xs font-bold text-gray-600 mb-2 block">Spełnione kryteria:</label>
-                                <div className="space-y-2 mb-4">
-                                    {selectedChallenge.criteria.map((criterion, idx) => (
-                                        <label key={idx} className="flex items-center space-x-3 bg-gray-50 p-3 rounded-xl border border-gray-100 cursor-pointer">
-                                            <input 
-                                                type="checkbox"
-                                                checked={!!auditCheckedCriteria[idx]}
-                                                onChange={(e) => setAuditCheckedCriteria({...auditCheckedCriteria, [idx]: e.target.checked})}
-                                                className="w-4 h-4 accent-primary rounded"
-                                            />
-                                            <span className="text-xs font-medium text-dark">{criterion}</span>
-                                        </label>
-                                    ))}
-                                </div>
-
-                                <label className="text-xs font-bold text-gray-600 mb-1 block">Notatka Audytora:</label>
-                                <textarea 
-                                    value={auditNote}
-                                    onChange={(e) => setAuditNote(e.target.value)}
-                                    placeholder="Wpisz komentarz..."
-                                    className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-xs focus:outline-none focus:border-primary mb-4 h-20 resize-none"
-                                />
-
-                                <button 
-                                    onClick={saveAudit}
-                                    className="w-full bg-primary hover:bg-opacity-90 text-white py-3.5 rounded-2xl font-bold text-sm shadow-md transition-transform active:scale-95">
-                                    Zapisz Audyt Dnia
-                                </button>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* MODAL TWORZENIA WYZWANIA */}
-                    {showCreateModal && (
-                        <div className="absolute inset-0 bg-black bg-opacity-50 z-40 flex flex-col justify-end backdrop-blur-xs animate-fadeIn">
-                            <form onSubmit={handleCreateChallenge} className="bg-white rounded-t-[32px] p-6 max-h-[90vh] overflow-y-auto shadow-2xl flex flex-col">
-                                <div className="flex justify-between items-center mb-4">
-                                    <h3 className="font-extrabold text-lg text-dark">Nowy Celomat 🎯</h3>
-                                    <button type="button" onClick={() => setShowCreateModal(false)} className="w-8 h-8 rounded-full bg-gray-100 text-gray-500 flex items-center justify-center font-bold">✕</button>
-                                </div>
-
-                                <label className="text-xs font-bold text-gray-600 mb-1 block">Nazwa celu / nagrody:</label>
-                                <input 
-                                    type="text"
-                                    required
-                                    placeholder="np. Nowa suszarka..."
-                                    value={newTitle}
-                                    onChange={(e) => setNewTitle(e.target.value)}
-                                    className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-xs focus:outline-none focus:border-primary mb-3"
-                                />
-
-                                <div className="grid grid-cols-2 gap-3 mb-3">
-                                    <div>
-                                        <label className="text-xs font-bold text-gray-600 mb-1 block">Ikona (Emoji):</label>
-                                        <input 
-                                            type="text"
-                                            value={newEmoji}
-                                            onChange={(e) => setNewEmoji(e.target.value)}
-                                            className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-center text-lg focus:outline-none focus:border-primary"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="text-xs font-bold text-gray-600 mb-1 block">Liczba dni (N):</label>
-                                        <input 
-                                            type="number"
-                                            min="1"
-                                            max="60"
-                                            value={newDuration}
-                                            onChange={(e) => setNewDuration(e.target.value)}
-                                            className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-xs font-bold text-center focus:outline-none focus:border-primary"
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-3 mb-3">
-                                    <div>
-                                        <label className="text-xs font-bold text-gray-600 mb-1 block">Realizuje:</label>
-                                        <select 
-                                            value={newAuditedBy}
-                                            onChange={(e) => setNewAuditedBy(e.target.value)}
-                                            className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-xs font-bold focus:outline-none focus:border-primary">
-                                            <option value="Mama">Mama</option>
-                                            <option value="Córka">Córka</option>
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label className="text-xs font-bold text-gray-600 mb-1 block">Audytor:</label>
-                                        <select 
-                                            value={newAuditor}
-                                            onChange={(e) => setNewAuditor(e.target.value)}
-                                            className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-xs font-bold focus:outline-none focus:border-primary">
-                                            <option value="Mama">Mama</option>
-                                            <option value="Córka">Córka</option>
-                                        </select>
-                                    </div>
-                                </div>
-
-                                <label className="text-xs font-bold text-gray-600 mb-1 block">Kryteria oceny:</label>
-                                <div className="space-y-2 mb-4">
-                                    {newCriteria.map((crit, idx) => (
-                                        <div key={idx} className="flex space-x-2">
-                                            <input 
-                                                type="text"
-                                                value={crit}
-                                                onChange={(e) => {
-                                                    const updated = [...newCriteria];
-                                                    updated[idx] = e.target.value;
-                                                    setNewCriteria(updated);
-                                                }}
-                                                className="flex-1 bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-xs focus:outline-none focus:border-primary"
-                                            />
-                                            {newCriteria.length > 1 && (
-                                                <button 
-                                                    type="button" 
-                                                    onClick={() => setNewCriteria(newCriteria.filter((_, i) => i !== idx))}
-                                                    className="px-3 text-rose-500 font-bold text-xs bg-rose-50 rounded-xl">
-                                                    ✕
-                                                </button>
-                                            )}
-                                        </div>
-                                    ))}
-                                    <button 
-                                        type="button"
-                                        onClick={() => setNewCriteria([...newCriteria, ''])}
-                                        className="w-full py-2 bg-gray-100 text-gray-600 rounded-xl text-xs font-bold hover:bg-gray-200 transition-colors">
-                                        + Dodaj kolejne kryterium
-                                    </button>
-                                </div>
-
-                                <button 
-                                    type="submit"
-                                    className="w-full bg-primary hover:bg-opacity-90 text-white py-3.5 rounded-2xl font-bold text-sm shadow-md transition-transform active:scale-95">
-                                    Uruchom Celomat! 🚀
-                                </button>
-                            </form>
-                        </div>
-                    )}
-
-                </div>
-            );
-        }
-
-        ReactDOM.render(<App />, document.getElementById('root'));
-    </script>
-</body>
-</html>
