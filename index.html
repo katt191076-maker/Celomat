@@ -78,6 +78,7 @@
             const [selectedChallenge, setSelectedChallenge] = React.useState(null);
             const [activeLogDay, setActiveLogDay] = React.useState(null);
             
+            // Stany formularza nowego wyzwania
             const [newTitle, setNewTitle] = React.useState('');
             const [newEmoji, setNewEmoji] = React.useState('🎯');
             const [newDuration, setNewDuration] = React.useState(14);
@@ -101,16 +102,17 @@
                 e.preventDefault();
                 if (!newTitle.trim()) return;
 
+                const validCriteria = newCriteria.filter(c => c.trim() !== '');
                 const challenge = {
                     id: Date.now(),
-                    title: newTitle,
-                    emoji: newEmoji,
-                    duration: parseInt(newDuration),
+                    title: newTitle.trim(),
+                    emoji: newEmoji.trim() || '🎯',
+                    duration: parseInt(newDuration) || 7,
                     mode: newMode,
                     type: 'audited',
                     auditedBy: newAuditedBy,
                     auditor: newAuditor,
-                    criteria: newCriteria.filter(c => c.trim() !== ''),
+                    criteria: validCriteria.length > 0 ? validCriteria : ['Główne zadanie'],
                     status: 'active',
                     logs: {},
                     cheers: []
@@ -118,8 +120,15 @@
 
                 setChallenges([challenge, ...challenges]);
                 setShowCreateModal(false);
+                
+                // Reset formularza
                 setNewTitle('');
-                setNewCriteria(['Kryterium 1']);
+                setNewEmoji('🎯');
+                setNewDuration(14);
+                setNewMode('streak');
+                setNewAuditedBy('Córka');
+                setNewAuditor('Mama');
+                setNewCriteria(['Kryterium 1', 'Kryterium 2']);
             };
 
             const saveAudit = () => {
@@ -162,14 +171,13 @@
                 setActiveLogDay(null);
             };
 
-            // Funkcja do czyszczenia/usuwania wpisu z danego dnia
             const clearAuditDay = () => {
                 if (!selectedChallenge || activeLogDay === null) return;
 
                 const updatedChallenges = challenges.map(c => {
                     if (c.id === selectedChallenge.id) {
                         let updatedLogs = { ...c.logs };
-                        delete updatedLogs[activeLogDay]; // Usunięcie wpisu dla tego dnia
+                        delete updatedLogs[activeLogDay];
 
                         const updated = { ...c, logs: updatedLogs };
                         setSelectedChallenge(updated);
@@ -406,7 +414,6 @@
                                                         setAuditStatus(existing.status || 'green');
                                                         setAuditNote(existing.note || '');
                                                         
-                                                        // Poprawione ładowanie zaznaczonych kryteriów
                                                         const checks = {};
                                                         if (existing.checked && Array.isArray(existing.checked)) {
                                                             existing.checked.forEach((val, i) => { checks[i] = val; });
@@ -513,7 +520,7 @@
                                     </button>
                                 </div>
 
-                                <label className="text-xs font-bold text-gray-600 mb-2 block">Spełnione kryteria (możesz odznaczyć):</label>
+                                <label className="text-xs font-bold text-gray-600 mb-2 block">Spełnione kryteria:</label>
                                 <div className="space-y-2 mb-4">
                                     {selectedChallenge.criteria.map((criterion, idx) => (
                                         <label key={idx} className="flex items-center space-x-3 bg-gray-50 p-3 rounded-xl border border-gray-100 cursor-pointer">
@@ -549,6 +556,112 @@
                                     </button>
                                 </div>
                             </div>
+                        </div>
+                    )}
+
+                    {/* MODAL TWORZENIA WYZWANIA */}
+                    {showCreateModal && (
+                        <div className="absolute inset-0 bg-black bg-opacity-50 z-40 flex flex-col justify-end backdrop-blur-xs animate-fadeIn">
+                            <form onSubmit={handleCreateChallenge} className="bg-white rounded-t-[32px] p-6 max-h-[90vh] overflow-y-auto shadow-2xl flex flex-col">
+                                <div className="flex justify-between items-center mb-4">
+                                    <h3 className="font-extrabold text-lg text-dark">Nowy Celomat 🎯</h3>
+                                    <button type="button" onClick={() => setShowCreateModal(false)} className="w-8 h-8 rounded-full bg-gray-100 text-gray-500 flex items-center justify-center font-bold">✕</button>
+                                </div>
+
+                                <label className="text-xs font-bold text-gray-600 mb-1 block">Nazwa celu / nagrody:</label>
+                                <input 
+                                    type="text"
+                                    required
+                                    placeholder="np. Nowa suszarka..."
+                                    value={newTitle}
+                                    onChange={(e) => setNewTitle(e.target.value)}
+                                    className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-xs focus:outline-none focus:border-primary mb-3"
+                                />
+
+                                <div className="grid grid-cols-2 gap-3 mb-3">
+                                    <div>
+                                        <label className="text-xs font-bold text-gray-600 mb-1 block">Ikona (Emoji):</label>
+                                        <input 
+                                            type="text"
+                                            value={newEmoji}
+                                            onChange={(e) => setNewEmoji(e.target.value)}
+                                            className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-center text-lg focus:outline-none focus:border-primary"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-xs font-bold text-gray-600 mb-1 block">Liczba dni (N):</label>
+                                        <input 
+                                            type="number"
+                                            min="1"
+                                            max="60"
+                                            value={newDuration}
+                                            onChange={(e) => setNewDuration(e.target.value)}
+                                            className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-xs font-bold text-center focus:outline-none focus:border-primary"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-3 mb-3">
+                                    <div>
+                                        <label className="text-xs font-bold text-gray-600 mb-1 block">Realizuje:</label>
+                                        <select 
+                                            value={newAuditedBy}
+                                            onChange={(e) => setNewAuditedBy(e.target.value)}
+                                            className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-xs font-bold focus:outline-none focus:border-primary">
+                                            <option value="Mama">Mama</option>
+                                            <option value="Córka">Córka</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="text-xs font-bold text-gray-600 mb-1 block">Audytor:</label>
+                                        <select 
+                                            value={newAuditor}
+                                            onChange={(e) => setNewAuditor(e.target.value)}
+                                            className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-xs font-bold focus:outline-none focus:border-primary">
+                                            <option value="Mama">Mama</option>
+                                            <option value="Córka">Córka</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <label className="text-xs font-bold text-gray-600 mb-1 block">Kryteria oceny:</label>
+                                <div className="space-y-2 mb-4">
+                                    {newCriteria.map((crit, idx) => (
+                                        <div key={idx} className="flex space-x-2">
+                                            <input 
+                                                type="text"
+                                                value={crit}
+                                                onChange={(e) => {
+                                                    const updated = [...newCriteria];
+                                                    updated[idx] = e.target.value;
+                                                    setNewCriteria(updated);
+                                                }}
+                                                className="flex-1 bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-xs focus:outline-none focus:border-primary"
+                                            />
+                                            {newCriteria.length > 1 && (
+                                                <button 
+                                                    type="button" 
+                                                    onClick={() => setNewCriteria(newCriteria.filter((_, i) => i !== idx))}
+                                                    className="px-3 text-rose-500 font-bold text-xs bg-rose-50 rounded-xl">
+                                                    ✕
+                                                </button>
+                                            )}
+                                        </div>
+                                    ))}
+                                    <button 
+                                        type="button"
+                                        onClick={() => setNewCriteria([...newCriteria, ''])}
+                                        className="w-full py-2 bg-gray-100 text-gray-600 rounded-xl text-xs font-bold hover:bg-gray-200 transition-colors">
+                                        + Dodaj kolejne kryterium
+                                    </button>
+                                </div>
+
+                                <button 
+                                    type="submit"
+                                    className="w-full bg-primary hover:bg-opacity-90 text-white py-3.5 rounded-2xl font-bold text-sm shadow-md transition-transform active:scale-95">
+                                    Uruchom Celomat! 🚀
+                                </button>
+                            </form>
                         </div>
                     )}
 
