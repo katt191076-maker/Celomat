@@ -2,944 +2,685 @@
 <html lang="pl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Celomat - Aplikacja Mobilna</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Celomat - Wyzwania i Motywacja</title>
+    
+    <!-- Meta tagi dla PWA / Instalacji na telefonie -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Celomat">
+    <meta name="theme-color" content="#FF6B6B">
+    
+    <!-- Ikona aplikacji dla urządzeń mobilnych (Base64 SVG - radosny symbol prezentu/celu) -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='110' fill='%23FF6B6B'/><text x='50%25' y='55%25' font-size='240' text-anchor='middle' dominant-baseline='central'>🎁</text></svg>">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='110' fill='%23FF6B6B'/><text x='50%25' y='55%25' font-size='240' text-anchor='middle' dominant-baseline='central'>🎁</text></svg>">
+
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script>
         tailwind.config = {
             theme: {
                 extend: {
-                    fontFamily: {
-                        sans: ['"Plus Jakarta Sans"', 'sans-serif'],
-                        heading: ['Outfit', 'sans-serif'],
-                    },
                     colors: {
-                        coral: { 500: '#FF6B6B', 600: '#E85555' },
-                        mint: { 500: '#4ECDC4', 600: '#3DBDB5' },
-                        sunny: '#FFD166',
-                        raspberry: '#EF476F',
-                        skyblue: '#118AB2',
-                        cream: '#FDFBF7',
+                        primary: '#FF6B6B',
+                        secondary: '#4ECDC4',
+                        accent: '#FFE66D',
+                        dark: '#2D3748',
+                        light: '#F7FAFC'
                     }
                 }
             }
         }
     </script>
-    <style>
-        * {
-            -webkit-tap-highlight-color: transparent;
-        }
-        body {
-            font-family: 'Plus Jakarta Sans', sans-serif;
-            background-color: #FDFBF7;
-            color: #2D3748;
-            margin: 0;
-            padding: 0;
-            overflow-x: hidden;
-        }
-        h1, h2, h3, h4, .font-heading {
-            font-family: 'Outfit', sans-serif;
-        }
-        /* Full mobile screen container */
-        #app-container {
-            width: 100vw;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            position: relative;
-            background-color: #FDFBF7;
-            padding-bottom: 80px; /* space for bottom nav */
-        }
-        /* Custom scrollbars */
-        ::-webkit-scrollbar {
-            width: 4px;
-            height: 4px;
-        }
-        ::-webkit-scrollbar-track {
-            background: transparent;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #E2E8F0;
-            border-radius: 9999px;
-        }
-        /* Canvas for fireworks */
-        #fireworks-canvas {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            pointer-events: none;
-            z-index: 9999;
-        }
-    </style>
+    <!-- React & Babel -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Canvas Confetti dla fajerwerków -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
 </head>
-<body class="antialiased selection:bg-coral-500 selection:text-white">
+<body class="bg-gray-100 text-dark antialiased select-none flex justify-center items-center min-h-screen">
 
-    <!-- Fireworks Canvas -->
-    <canvas id="fireworks-canvas"></canvas>
+    <div id="root" class="w-full max-w-md h-[100vh] sm:h-[855px] sm:rounded-[40px] sm:shadow-2xl bg-white overflow-hidden flex flex-col relative border border-gray-200"></div>
 
-    <!-- App Container -->
-    <div id="app-container">
-
-        <!-- Top Header Bar -->
-        <header class="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-orange-100 px-5 py-3.5 flex items-center justify-between shadow-xs">
-            <!-- Logo & Title -->
-            <div class="flex items-center space-x-3 cursor-pointer" onclick="switchView('hub')">
-                <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-coral-500 to-sunny flex items-center justify-center text-white shadow-md shadow-coral-500/25 text-xl font-extrabold">
-                    🎯
-                </div>
-                <div>
-                    <h1 class="font-heading text-lg font-extrabold tracking-tight text-slate-800 leading-none">
-                        Celomat
-                    </h1>
-                    <span class="text-[10px] text-slate-500 font-semibold tracking-wide uppercase">Wyzwania i Nawyki</span>
-                </div>
-            </div>
-
-            <!-- Profile Switcher -->
-            <div class="flex items-center space-x-2">
-                <div class="bg-slate-100 p-1 rounded-2xl flex items-center border border-slate-200/80 text-xs font-semibold">
-                    <button onclick="switchProfile('Mama')" id="profile-btn-Mama" class="px-3 py-1.5 rounded-xl transition-all">👩 Mama</button>
-                    <button onclick="switchProfile('Córka')" id="profile-btn-Córka" class="px-3 py-1.5 rounded-xl transition-all">👧 Córka</button>
-                </div>
-            </div>
-        </header>
-
-        <!-- Main Content Area -->
-        <main class="flex-1 px-4 py-5 max-w-xl mx-auto w-full space-y-5">
-
-            <!-- VIEW 1: HUB (Challenge List) -->
-            <div id="view-hub" class="space-y-5">
-                
-                <!-- Welcome Banner -->
-                <div class="bg-gradient-to-r from-coral-500/10 via-sunny/20 to-mint-500/20 rounded-3xl p-6 border border-orange-200/60 shadow-xs relative overflow-hidden">
-                    <div class="absolute -right-4 -bottom-4 text-6xl opacity-20">🚀</div>
-                    <span class="text-[11px] font-bold uppercase tracking-wider text-coral-600 bg-coral-500/15 px-3 py-1 rounded-full">Aktywny profil: <span id="current-user-display" class="font-extrabold">Mama</span></span>
-                    <h2 class="text-2xl font-heading font-extrabold text-slate-800 mt-2">Dzień dobry! 👋</h2>
-                    <p class="text-xs text-slate-600 mt-1">Realizuj codzienne nawyki i odblokuj wymarzone nagrody.</p>
-                </div>
-
-                <!-- Tabs & Filters -->
-                <div class="space-y-3">
-                    <div class="flex bg-slate-200/70 p-1 rounded-2xl">
-                        <button onclick="switchTab('active')" id="tab-active" class="flex-1 py-2.5 rounded-xl font-heading font-bold text-xs bg-white text-slate-800 shadow-xs transition-all">
-                            🔥 W trakcie (<span id="count-active">0</span>)
-                        </button>
-                        <button onclick="switchTab('completed')" id="tab-completed" class="flex-1 py-2.5 rounded-xl font-heading font-bold text-xs text-slate-500 transition-all">
-                            🏆 Zdobyte (<span id="count-completed">0</span>)
-                        </button>
-                    </div>
-
-                    <div class="flex items-center space-x-2 overflow-x-auto pb-1 text-xs">
-                        <button onclick="setFilter('all')" id="filter-all" class="px-3.5 py-2 rounded-xl font-semibold bg-slate-800 text-white whitespace-nowrap shadow-xs">Wszystkie</button>
-                        <button onclick="setFilter('mine')" id="filter-mine" class="px-3.5 py-2 rounded-xl font-medium bg-white border border-slate-200 text-slate-600 whitespace-nowrap">Moje cele</button>
-                        <button onclick="setFilter('to-audit')" id="filter-to-audit" class="px-3.5 py-2 rounded-xl font-medium bg-white border border-slate-200 text-slate-600 whitespace-nowrap flex items-center gap-1.5">
-                            Do oceny <span id="audit-badge" class="hidden w-2 h-2 rounded-full bg-coral-500"></span>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Challenge Cards List -->
-                <div id="challenges-list" class="space-y-4">
-                    <!-- Rendered via JS -->
-                </div>
-
-            </div>
-
-
-            <!-- VIEW 2: CHALLENGE DETAILS -->
-            <div id="view-details" class="hidden space-y-5">
-                
-                <!-- Back Button & Header -->
-                <div class="flex items-center justify-between">
-                    <button onclick="switchView('hub')" class="inline-flex items-center space-x-2 text-xs font-semibold text-slate-600 bg-white px-4 py-2.5 rounded-2xl border border-slate-200 shadow-xs active:scale-95 transition-all">
-                        <span>← Wróć do listy</span>
-                    </button>
-                    <span id="detail-group-badge" class="text-xs font-bold px-3 py-1 rounded-full bg-coral-500/10 text-coral-600">Cel Domowy</span>
-                </div>
-
-                <!-- Main Details Card -->
-                <div class="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm relative overflow-hidden">
-                    <div class="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-coral-500/10 to-sunny/20 rounded-bl-full pointer-events-none"></div>
-
-                    <div class="flex items-start space-x-4">
-                        <div id="detail-emoji" class="w-16 h-16 rounded-2xl bg-orange-100 flex items-center justify-center text-3xl shadow-inner flex-shrink-0">
-                            💇‍♀️
-                        </div>
-                        <div class="flex-1 min-w-0">
-                            <div class="flex items-center gap-1.5 flex-wrap mb-1">
-                                <span id="detail-badge-type" class="text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-orange-100 text-coral-600">Audytowane</span>
-                                <span id="detail-badge-mode" class="text-[10px] font-semibold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600">Tryb ciągły</span>
-                            </div>
-                            <h2 id="detail-title" class="text-xl font-heading font-extrabold text-slate-800 truncate">Nowa suszarka</h2>
-                            <p class="text-xs text-slate-500 mt-0.5">Realizuje: <strong id="detail-participant" class="text-slate-700">Córka</strong> | Audytor: <strong id="detail-auditor" class="text-slate-700">Mama</strong></p>
-                        </div>
-                    </div>
-
-                    <!-- Progress Bar -->
-                    <div class="mt-5 pt-4 border-t border-slate-100">
-                        <div class="flex justify-between items-center text-xs mb-2">
-                            <span class="font-semibold text-slate-700">Postęp serii: <span id="detail-progress-text" class="text-coral-600 font-extrabold">0 / 14 dni</span></span>
-                            <span id="detail-percentage" class="text-xs font-extrabold text-slate-600 bg-slate-100 px-2.5 py-0.5 rounded-lg">0%</span>
-                        </div>
-                        <div class="w-full bg-slate-100 h-3.5 rounded-full overflow-hidden p-0.5 border border-slate-200">
-                            <div id="detail-progress-bar" class="bg-gradient-to-r from-coral-500 to-sunny h-full rounded-full transition-all duration-500" style="width: 0%"></div>
-                        </div>
-                    </div>
-
-                    <!-- Criteria List Tags -->
-                    <div class="mt-4 bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
-                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Kryteria oceny:</p>
-                        <div id="detail-criteria-tags" class="flex flex-wrap gap-1.5">
-                            <!-- Tags loaded via JS -->
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Tile Grid Container -->
-                <div class="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm space-y-4">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <h3 class="font-heading font-bold text-base text-slate-800">Siatka Dni Wyzwania</h3>
-                            <p class="text-[11px] text-slate-500">Kliknij kafelek, aby sprawdzić lub ocenić dzień</p>
-                        </div>
-                        <span class="text-xs font-bold text-coral-600 bg-coral-500/10 px-3 py-1 rounded-full">Tapnij kafelek</span>
-                    </div>
-
-                    <!-- Legend -->
-                    <div class="grid grid-cols-2 gap-2 text-[11px] font-medium text-slate-600 bg-slate-50 p-3 rounded-2xl border border-slate-200">
-                        <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-mint-500 shadow-xs"></span> 🟢 Zaliczone</div>
-                        <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-sunny shadow-xs"></span> 🟡 Warunkowe</div>
-                        <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-raspberry shadow-xs"></span> 🔴 Niezaliczone</div>
-                        <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-skyblue shadow-xs"></span> 🔵 Dzień pauzy</div>
-                    </div>
-
-                    <!-- Grid -->
-                    <div id="tiles-grid" class="grid grid-cols-4 gap-2.5 pt-2">
-                        <!-- Rendered via JS -->
-                    </div>
-                </div>
-
-                <!-- Cheer Zone -->
-                <div class="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm space-y-4">
-                    <div class="flex items-center justify-between">
-                        <h3 class="font-heading font-bold text-base text-slate-800">💬 Strefa Kibicowania</h3>
-                        <span class="text-xs text-slate-400">Motywuj</span>
-                    </div>
-
-                    <div class="flex items-center gap-2 overflow-x-auto pb-1">
-                        <button onclick="sendQuickCheer('🔥')" class="bg-slate-100 hover:bg-orange-100 px-3 py-2 rounded-xl text-xs whitespace-nowrap active:scale-95 font-semibold transition-all">🔥 Ogień!</button>
-                        <button onclick="sendQuickCheer('👏')" class="bg-slate-100 hover:bg-orange-100 px-3 py-2 rounded-xl text-xs whitespace-nowrap active:scale-95 font-semibold transition-all">👏 Brawo!</button>
-                        <button onclick="sendQuickCheer('💪')" class="bg-slate-100 hover:bg-orange-100 px-3 py-2 rounded-xl text-xs whitespace-nowrap active:scale-95 font-semibold transition-all">💪 Trzymaj się!</button>
-                        <button onclick="sendQuickCheer('🚀')" class="bg-slate-100 hover:bg-orange-100 px-3 py-2 rounded-xl text-xs whitespace-nowrap active:scale-95 font-semibold transition-all">🚀 Masz to!</button>
-                    </div>
-
-                    <div id="cheers-feed" class="space-y-2.5 max-h-40 overflow-y-auto pr-1">
-                        <!-- Feed loaded via JS -->
-                    </div>
-
-                    <div class="flex gap-2 pt-2 border-t border-slate-100">
-                        <input type="text" id="cheer-input" placeholder="Napisz wspierającą wiadomość..." class="flex-1 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-2.5 text-xs focus:outline-none focus:border-coral-500 font-medium">
-                        <button onclick="postCheer()" class="bg-coral-500 hover:bg-coral-600 text-white font-bold px-5 py-2.5 rounded-2xl text-xs transition-all shadow-md shadow-coral-500/25 active:scale-95">Wyślij</button>
-                    </div>
-                </div>
-
-            </div>
-
-        </main>
-
-        <!-- Bottom Navigation Bar (Mobile Native Style) -->
-        <nav class="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200/80 px-6 py-3 flex items-center justify-around z-40 max-w-xl mx-auto">
-            <button onclick="switchView('hub')" class="flex flex-col items-center text-coral-600 space-y-1 font-semibold text-[11px]">
-                <span class="text-xl">🏠</span>
-                <span>Wyzwania</span>
-            </button>
-            <button onclick="openNewChallengeModal()" class="w-12 h-12 bg-gradient-to-r from-coral-500 to-coral-600 text-white font-bold rounded-2xl shadow-lg shadow-coral-500/30 flex items-center justify-center text-2xl active:scale-95 transition-all -mt-4">
-                +
-            </button>
-            <button onclick="switchProfile(currentProfile === 'Mama' ? 'Córka' : 'Mama')" class="flex flex-col items-center text-slate-500 hover:text-slate-800 space-y-1 font-semibold text-[11px] transition-all">
-                <span class="text-xl">👤</span>
-                <span id="bottom-profile-label">Profil: Córka</span>
-            </button>
-        </nav>
-
-    </div>
-
-
-    <!-- MODAL: NEW CHALLENGE WIZARD -->
-    <div id="modal-new-challenge" class="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm hidden items-center justify-center p-4">
-        <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 max-h-[90vh] overflow-y-auto">
-            <div class="flex items-center justify-between mb-4">
-                <h3 class="font-heading font-extrabold text-xl text-slate-800">✨ Nowe Wyzwanie</h3>
-                <button onclick="closeNewChallengeModal()" class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 font-bold text-sm">✕</button>
-            </div>
-
-            <form onsubmit="handleCreateChallenge(event)" class="space-y-4">
-                <div class="grid grid-cols-4 gap-3">
-                    <div class="col-span-1">
-                        <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">Ikona</label>
-                        <select id="new-emoji" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-2 py-3 text-center text-xl focus:outline-none focus:border-coral-500 font-semibold">
-                            <option value="💇‍♀️">💇‍♀️</option>
-                            <option value="📚">📚</option>
-                            <option value="💧">💧</option>
-                            <option value="🏃‍♀️">🏃‍♀️</option>
-                            <option value="📱">📱</option>
-                            <option value="🧹">🧹</option>
-                            <option value="🥗">🥗</option>
-                        </select>
-                    </div>
-                    <div class="col-span-3">
-                        <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">Nazwa celu</label>
-                        <input type="text" id="new-title" required placeholder="np. Nowa suszarka" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-xs focus:outline-none focus:border-coral-500 font-medium">
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">Kto realizuje?</label>
-                        <select id="new-participant" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-3 py-2.5 text-xs focus:outline-none focus:border-coral-500 font-medium">
-                            <option value="Córka">Córka</option>
-                            <option value="Mama">Mama</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">Kto ocenia?</label>
-                        <select id="new-auditor" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-3 py-2.5 text-xs focus:outline-none focus:border-coral-500 font-medium">
-                            <option value="Mama">Mama</option>
-                            <option value="Córka">Córka</option>
-                            <option value="Samokontrola">Samokontrola</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">Tryb licznika</label>
-                        <select id="new-mode" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-3 py-2.5 text-xs focus:outline-none focus:border-coral-500 font-medium">
-                            <option value="STREAK">Ciągły (+ siatka)</option>
-                            <option value="ACCUMULATE">Suma dni</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">Liczba dni ($N$)</label>
-                        <input type="number" id="new-days" min="3" max="30" value="14" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-2.5 text-xs focus:outline-none focus:border-coral-500 font-medium">
-                    </div>
-                </div>
-
-                <div>
-                    <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">Kryteria oceny</label>
-                    <div id="criteria-inputs-container" class="space-y-2 mb-2">
-                        <div class="flex gap-2">
-                            <input type="text" value="Łóżko pościelone" required class="criterion-input flex-1 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-2 text-xs focus:outline-none focus:border-coral-500 font-medium">
-                            <button type="button" onclick="removeCriterionInput(this)" class="px-3 text-slate-400 hover:text-raspberry font-bold">✕</button>
-                        </div>
-                        <div class="flex gap-2">
-                            <input type="text" value="Pokój wywietrzony" required class="criterion-input flex-1 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-2 text-xs focus:outline-none focus:border-coral-500 font-medium">
-                            <button type="button" onclick="removeCriterionInput(this)" class="px-3 text-slate-400 hover:text-raspberry font-bold">✕</button>
-                        </div>
-                    </div>
-                    <button type="button" onclick="addCriterionInput()" class="text-xs font-bold text-coral-600 bg-coral-500/10 px-3 py-1.5 rounded-xl">
-                        + Dodaj kryterium
-                    </button>
-                </div>
-
-                <div class="pt-4 border-t border-slate-100 flex justify-end gap-3">
-                    <button type="button" onclick="closeNewChallengeModal()" class="px-5 py-2.5 rounded-2xl border border-slate-200 text-slate-600 font-semibold text-xs">Anuluj</button>
-                    <button type="submit" class="px-6 py-2.5 rounded-2xl bg-coral-500 text-white font-bold text-xs shadow-md shadow-coral-500/25 active:scale-95 transition-all">Utwórz cel</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-
-    <!-- MODAL: AUDIT DAY -->
-    <div id="modal-audit" class="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm hidden items-center justify-center p-4">
-        <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 max-h-[90vh] overflow-y-auto">
-            <div class="flex items-center justify-between mb-4">
-                <div class="flex items-center space-x-2">
-                    <span id="audit-day-badge" class="bg-orange-100 text-coral-600 font-extrabold text-xs px-3 py-1 rounded-full">Dzień 1</span>
-                    <span id="audit-date" class="text-xs text-slate-400 font-medium">16.11</span>
-                </div>
-                <button onclick="closeAuditModal()" class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 font-bold text-sm">✕</button>
-            </div>
-
-            <h3 id="audit-challenge-title" class="font-heading font-extrabold text-lg text-slate-800 mb-1">Nowa suszarka</h3>
-            <p id="audit-permission-notice" class="text-xs text-amber-600 bg-amber-50 p-3 rounded-2xl border border-amber-200 mb-4 hidden">⚠️ Tryb podglądu (read-only). Brak uprawnień do edycji tego dnia.</p>
-
-            <div class="mb-4">
-                <label class="block text-[11px] font-bold text-slate-500 uppercase mb-2">Status dnia:</label>
-                <div class="grid grid-cols-4 gap-2">
-                    <button type="button" onclick="setAuditStatus('GREEN')" id="status-btn-GREEN" class="status-btn flex flex-col items-center justify-center p-2.5 rounded-2xl border-2 border-slate-200 bg-slate-50 text-slate-700 font-semibold text-xs transition-all">
-                        <span class="w-3 h-3 rounded-full bg-mint-500 mb-1 shadow-xs"></span> Zaliczone
-                    </button>
-                    <button type="button" onclick="setAuditStatus('YELLOW')" id="status-btn-YELLOW" class="status-btn flex flex-col items-center justify-center p-2.5 rounded-2xl border-2 border-slate-200 bg-slate-50 text-slate-700 font-semibold text-xs transition-all">
-                        <span class="w-3 h-3 rounded-full bg-sunny mb-1 shadow-xs"></span> Warun.
-                    </button>
-                    <button type="button" onclick="setAuditStatus('RED')" id="status-btn-RED" class="status-btn flex flex-col items-center justify-center p-2.5 rounded-2xl border-2 border-slate-200 bg-slate-50 text-slate-700 font-semibold text-xs transition-all">
-                        <span class="w-3 h-3 rounded-full bg-raspberry mb-1 shadow-xs"></span> Niezal.
-                    </button>
-                    <button type="button" onclick="setAuditStatus('BLUE')" id="status-btn-BLUE" class="status-btn flex flex-col items-center justify-center p-2.5 rounded-2xl border-2 border-slate-200 bg-slate-50 text-slate-700 font-semibold text-xs transition-all">
-                        <span class="w-3 h-3 rounded-full bg-skyblue mb-1 shadow-xs"></span> Pauza
-                    </button>
-                </div>
-            </div>
-
-            <div class="mb-4">
-                <label class="block text-[11px] font-bold text-slate-500 uppercase mb-2">Checklista kryteriów:</label>
-                <div id="audit-criteria-list" class="space-y-2 bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
-                    <!-- Loaded dynamically -->
-                </div>
-            </div>
-
-            <div class="mb-4">
-                <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">Notatka audytora</label>
-                <textarea id="audit-note" placeholder="Dodaj komentarz..." class="w-full bg-slate-50 border border-slate-200 rounded-2xl p-3 text-xs focus:outline-none focus:border-coral-500 h-20 resize-none font-medium"></textarea>
-            </div>
-
-            <div class="mb-4">
-                <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">Zdjęcie dowodowe (opcjonalnie)</label>
-                <div class="flex items-center gap-3">
-                    <input type="file" id="audit-photo-input" accept="image/*" onchange="handlePhotoUpload(event)" class="hidden">
-                    <button type="button" onclick="document.getElementById('audit-photo-input').click()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs px-4 py-2.5 rounded-2xl border border-slate-200 transition-all">
-                        📷 Dodaj zdjęcie
-                    </button>
-                    <span id="audit-photo-status" class="text-xs text-slate-400 font-medium">Brak</span>
-                </div>
-                <div id="audit-photo-preview" class="mt-3 hidden">
-                    <img id="audit-photo-img" src="" alt="Dowód" class="w-full h-32 object-cover rounded-2xl border border-slate-200 shadow-xs">
-                </div>
-            </div>
-
-            <div class="flex justify-end gap-3 pt-3 border-t border-slate-100">
-                <button type="button" onclick="closeAuditModal()" class="px-5 py-2.5 rounded-2xl border border-slate-200 text-slate-600 font-semibold text-xs">Zamknij</button>
-                <button type="button" id="audit-save-btn" onclick="saveAudit()" class="px-6 py-2.5 rounded-2xl bg-coral-500 text-white font-bold text-xs shadow-md shadow-coral-500/25 active:scale-95 transition-all">Zapisz dzień</button>
-            </div>
-        </div>
-    </div>
-
-
-    <!-- MODAL: CELEBRATION -->
-    <div id="modal-celebration" class="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-sm hidden items-center justify-center p-4">
-        <div class="bg-white rounded-3xl max-w-sm w-full p-8 text-center shadow-2xl border border-orange-200 relative overflow-hidden">
-            <div class="text-6xl mb-3">🏆🎉</div>
-            <h3 class="font-heading font-extrabold text-2xl text-slate-800">Cel Zdobyty!</h3>
-            <p class="text-xs text-slate-600 mt-2 font-medium">Fantastyczna robota! Wyzwanie zostało ukończone ze 100% skutecznością. Nagroda odblokowana!</p>
-            <button onclick="closeCelebrationModal()" class="mt-6 w-full bg-coral-500 hover:bg-coral-600 text-white font-bold py-3.5 rounded-2xl shadow-lg shadow-coral-500/30 text-xs active:scale-95 transition-all">
-                Odbieram nagrodę! 🚀
-            </button>
-        </div>
-    </div>
-
-    <!-- Application Script -->
-    <script>
-        let currentProfile = 'Córka';
-        let currentTab = 'active';
-        let currentFilter = 'all';
-        let activeChallengeId = null;
-        let activeDayNumber = null;
-        let activeStatus = 'GREEN';
-        let tempPhotoData = null;
-
-        let challenges = [
-            {
-                id: 'ch-1',
-                title: 'Nowa suszarka',
-                emoji: '💇‍♀️',
-                participant: 'Córka',
-                auditor: 'Mama',
-                mode: 'STREAK',
-                targetDays: 14,
-                status: 'ACTIVE',
-                criteria: ['Łóżko pościelone', 'Pokój wywietrzony', 'Biurko posprzątane'],
-                logs: {
-                    1: { status: 'GREEN', criteria: {0: true, 1: true, 2: true}, note: 'Wzorowo posprzątane!', photo: null, date: '16.11' },
-                    2: { status: 'GREEN', criteria: {0: true, 1: true, 2: true}, note: 'Super okno otwarte.', photo: null, date: '17.11' }
+    <script type="text/babel">
+        function App() {
+            const [currentProfile, setCurrentProfile] = React.useState('Mama');
+            const [activeTab, setActiveTab] = React.useState('active'); // active, completed, profile
+            const [filterView, setFilterView] = React.useState('all'); // all, mine, assigned
+            
+            const [challenges, setChallenges] = React.useState([
+                {
+                    id: 1,
+                    title: 'Nowa suszarka',
+                    emoji: '💇‍♀️',
+                    duration: 14,
+                    mode: 'streak', // streak lub accumulate
+                    type: 'audited', // audited, solo, duel
+                    auditedBy: 'Córka',
+                    auditor: 'Mama',
+                    criteria: ['Łóżko pościelone', 'Biurko i podłoga czyste', 'Brak ubrań na krześle', 'Pokój wywietrzony'],
+                    status: 'active',
+                    logs: {
+                        1: { status: 'green', note: 'Świetny początek!', photo: null, checked: [true, true, true, true] },
+                        2: { status: 'green', note: 'Super porządek', photo: null, checked: [true, true, true, true] },
+                        3: { status: 'red', note: 'Zostawione ubrania na fotelu', photo: null, checked: [true, false, true, true] },
+                        4: { status: 'green', note: 'Poprawione wzorowo', photo: null, checked: [true, true, true, true] },
+                        5: { status: 'blue', note: 'Dzień wyjazdu - pauza', photo: null, checked: [] }
+                    },
+                    cheers: [
+                        { id: 1, author: 'Mama', text: 'Bądź grzeczna, suszarka czeka! 🔥', time: 'Wczoraj 20:15' }
+                    ]
                 },
-                cheers: [
-                    { sender: 'Mama', message: 'Dzielnie walczysz o suszarkę! 🔥', time: 'Wczoraj' },
-                    { sender: 'Córka', message: 'Dzięki mamo! Staram się 🚀', time: 'Dzisiaj' }
-                ]
-            }
-        ];
+                {
+                    id: 2,
+                    title: 'Wczesne wstawanie o 6:30',
+                    emoji: '🌅',
+                    duration: 7,
+                    mode: 'streak',
+                    type: 'solo',
+                    auditedBy: 'Mama',
+                    auditor: 'Mama',
+                    criteria: ['Pobudka przy pierwszym budziku', 'Szklanka wody wypita'],
+                    status: 'active',
+                    logs: {
+                        1: { status: 'green', note: 'Dzielnie wstałam', photo: null, checked: [true, true] }
+                    },
+                    cheers: []
+                }
+            ]);
 
-        window.onload = function() {
-            renderHub();
-            updateAuditBadge();
-        };
+            const [showCreateModal, setShowCreateModal] = React.useState(false);
+            const [selectedChallenge, setSelectedChallenge] = React.useState(null);
+            const [activeLogDay, setActiveLogDay] = React.useState(null);
+            
+            // Stany formularza nowog wyzwania
+            const [newTitle, setNewTitle] = React.useState('');
+            const [newEmoji, setNewEmoji] = React.useState('🎯');
+            const [newDuration, setNewDuration] = React.useState(14);
+            const [newMode, setNewMode] = React.useState('streak');
+            const [newType, setNewType] = React.useState('audited');
+            const [newAuditedBy, setNewAuditedBy] = React.useState('Córka');
+            const [newAuditor, setNewAuditor] = React.useState('Mama');
+            const [newCriteria, setNewCriteria] = React.useState(['Kryterium 1', 'Kryterium 2']);
 
-        function switchProfile(profileName) {
-            currentProfile = profileName;
-            document.getElementById('current-user-display').innerText = profileName;
-            document.getElementById('bottom-profile-label').innerText = `Profil: ${profileName}`;
-            document.getElementById('profile-btn-Mama').className = profileName === 'Mama' ? 'px-3 py-1.5 rounded-xl transition-all bg-white text-slate-800 shadow-xs font-bold' : 'px-3 py-1.5 rounded-xl transition-all text-slate-500 font-medium';
-            document.getElementById('profile-btn-Córka').className = profileName === 'Córka' ? 'px-3 py-1.5 rounded-xl transition-all bg-white text-slate-800 shadow-xs font-bold' : 'px-3 py-1.5 rounded-xl transition-all text-slate-500 font-medium';
-            renderHub();
-            if (activeChallengeId) openChallengeDetails(activeChallengeId);
-        }
+            // Stan edycji audytu dnia
+            const [auditStatus, setAuditStatus] = React.useState('green');
+            const [auditNote, setAuditNote] = React.useState('');
+            const [auditCheckedCriteria, setAuditCheckedCriteria] = React.useState({});
+            const [auditPhoto, setAuditPhoto] = React.useState(null);
 
-        function switchView(viewName) {
-            const hub = document.getElementById('view-hub');
-            const details = document.getElementById('view-details');
-            if (viewName === 'hub') {
-                hub.classList.remove('hidden');
-                details.classList.add('hidden');
-                activeChallengeId = null;
-                renderHub();
-            } else {
-                hub.classList.add('hidden');
-                details.classList.remove('hidden');
-            }
-        }
+            // Stan kibicowania
+            const [newCheerText, setNewCheerText] = React.useState('');
 
-        function switchTab(tabName) {
-            currentTab = tabName;
-            const btnActive = document.getElementById('tab-active');
-            const btnCompleted = document.getElementById('tab-completed');
-            if (tabName === 'active') {
-                btnActive.className = 'flex-1 py-2.5 rounded-xl font-heading font-bold text-xs bg-white text-slate-800 shadow-xs transition-all';
-                btnCompleted.className = 'flex-1 py-2.5 rounded-xl font-heading font-bold text-xs text-slate-500 transition-all';
-            } else {
-                btnCompleted.className = 'flex-1 py-2.5 rounded-xl font-heading font-bold text-xs bg-white text-slate-800 shadow-xs transition-all';
-                btnActive.className = 'flex-1 py-2.5 rounded-xl font-heading font-bold text-xs text-slate-500 transition-all';
-            }
-            renderHub();
-        }
+            // Efekt fajerwerków po zakończeniu
+            const triggerFireworks = () => {
+                if (typeof confetti === 'function') {
+                    confetti({
+                        particleCount: 150,
+                        spread: 80,
+                        origin: { y: 0.6 }
+                    });
+                }
+            };
 
-        function setFilter(filterName) {
-            currentFilter = filterName;
-            ['all', 'mine', 'to-audit'].forEach(f => {
-                const el = document.getElementById(`filter-${f}`);
-                if (el) el.className = f === filterName ? 'px-3.5 py-2 rounded-xl font-semibold bg-slate-800 text-white whitespace-nowrap shadow-xs' : 'px-3.5 py-2 rounded-xl font-medium bg-white border border-slate-200 text-slate-600 whitespace-nowrap';
-            });
-            renderHub();
-        }
+            const handleCreateChallenge = (e) => {
+                e.preventDefault();
+                if (!newTitle.trim()) return;
 
-        function renderHub() {
-            const list = document.getElementById('challenges-list');
-            list.innerHTML = '';
+                const challenge = {
+                    id: Date.now(),
+                    title: newTitle,
+                    emoji: newEmoji,
+                    duration: parseInt(newDuration),
+                    mode: newMode,
+                    type: newType,
+                    auditedBy: newAuditedBy,
+                    auditor: newAuditor,
+                    criteria: newCriteria.filter(c => c.trim() !== ''),
+                    status: 'active',
+                    logs: {},
+                    cheers: []
+                };
 
-            let filtered = challenges.filter(c => {
-                if (currentTab === 'active' && c.status !== 'ACTIVE') return false;
-                if (currentTab === 'completed' && c.status !== 'COMPLETED') return false;
-                if (currentFilter === 'mine') return c.participant === currentProfile || c.auditor === currentProfile;
-                if (currentFilter === 'to-audit') return c.auditor === currentProfile && c.status === 'ACTIVE';
+                setChallenges([challenge, ...challenges]);
+                setShowCreateModal(false);
+                setNewTitle('');
+                setNewCriteria(['Kryterium 1']);
+            };
+
+            const saveAudit = () => {
+                if (!selectedChallenge || activeLogDay === null) return;
+
+                const updatedChallenges = challenges.map(c => {
+                    if (c.id === selectedChallenge.id) {
+                        const updatedLogs = {
+                            ...c.logs,
+                            [activeLogDay]: {
+                                status: auditStatus,
+                                note: auditNote,
+                                photo: auditPhoto,
+                                checked: selectedChallenge.criteria.map((_, idx) => !!auditCheckedCriteria[idx])
+                            }
+                        };
+
+                        // Sprawdzenie czy wyzwanie zostało ukończone
+                        const totalDays = c.duration;
+                        let completedCount = 0;
+                        for(let i=1; i<=totalDays; i++) {
+                            if(updatedLogs[i] && updatedLogs[i].status === 'green') completedCount++;
+                        }
+
+                        let newStatus = c.status;
+                        if (completedCount >= totalDays) {
+                            newStatus = 'completed';
+                            setTimeout(triggerFireworks, 300);
+                        }
+
+                        const updated = { ...c, logs: updatedLogs, status: newStatus };
+                        setSelectedChallenge(updated);
+                        return updated;
+                    }
+                    return c;
+                });
+
+                setChallenges(updatedChallenges);
+                setActiveLogDay(null);
+            };
+
+            const addCheer = (challengeId) => {
+                if (!newCheerText.trim()) return;
+                const updated = challenges.map(c => {
+                    if (c.id === challengeId) {
+                        const newCheers = [...c.cheers, { id: Date.now(), author: currentProfile, text: newCheerText, time: 'Przed chwilą' }];
+                        const updatedCh = { ...c, cheers: newCheers };
+                        if(selectedChallenge && selectedChallenge.id === challengeId) setSelectedChallenge(updatedCh);
+                        return updatedCh;
+                    }
+                    return c;
+                });
+                setChallenges(updated);
+                setNewCheerText('');
+            };
+
+            // Filtrowanie wyzwań
+            const filteredChallenges = challenges.filter(c => {
+                const matchesTab = activeTab === 'active' ? c.status === 'active' : c.status === 'completed';
+                if (!matchesTab) return false;
+
+                if (filterView === 'mine') {
+                    return c.auditedBy === currentProfile;
+                } else if (filterView === 'assigned') {
+                    return c.auditor === currentProfile && c.auditedBy !== currentProfile;
+                }
                 return true;
             });
 
-            document.getElementById('count-active').innerText = challenges.filter(c => c.status === 'ACTIVE').length;
-            document.getElementById('count-completed').innerText = challenges.filter(c => c.status === 'COMPLETED').length;
-
-            if (filtered.length === 0) {
-                list.innerHTML = `
-                    <div class="bg-white rounded-3xl p-10 text-center border border-slate-200/80 shadow-xs">
-                        <div class="text-4xl mb-3">📭</div>
-                        <h4 class="font-heading font-bold text-base text-slate-800">Brak wyzwań</h4>
-                        <p class="text-xs text-slate-500 mt-1">Utwórz nowy cel za pomocą przycisku '+' poniżej.</p>
-                    </div>
-                `;
-                return;
-            }
-
-            filtered.forEach(ch => {
-                let greenCount = Object.values(ch.logs).filter(l => l.status === 'GREEN').length;
-                let percent = Math.min(100, Math.round((greenCount / ch.targetDays) * 100));
-                const isAuditorHere = ch.auditor === currentProfile;
-
-                const card = document.createElement('div');
-                card.className = "bg-white rounded-3xl p-5 border border-slate-200/80 shadow-xs active:scale-[0.99] transition-all cursor-pointer";
-                card.onclick = () => openChallengeDetails(ch.id);
-
-                card.innerHTML = `
-                    <div class="flex items-start justify-between mb-3">
-                        <div class="flex items-center space-x-3.5">
-                            <div class="w-12 h-12 rounded-2xl bg-orange-50 flex items-center justify-center text-2xl shadow-inner flex-shrink-0">
-                                ${ch.emoji}
+            return (
+                <div className="flex flex-col h-full bg-gray-50">
+                    
+                    {/* GÓRNY PASEK STATUSU / PROFILU */}
+                    <div className="bg-white px-5 py-4 border-b border-gray-100 flex items-center justify-between shadow-sm z-10">
+                        <div className="flex items-center space-x-3">
+                            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-primary to-accent flex items-center justify-center text-white text-xl shadow-md">
+                                🎁
                             </div>
                             <div>
-                                <h3 class="font-heading font-bold text-base text-slate-800 leading-tight">${ch.title}</h3>
-                                <p class="text-xs text-slate-500 mt-0.5">Uczestnik: <strong class="text-slate-700">${ch.participant}</strong></p>
+                                <h1 className="font-bold text-lg text-dark tracking-tight leading-none">Celomat</h1>
+                                <span className="text-xs text-gray-400 font-medium">Strefa Motywacji</span>
                             </div>
                         </div>
-                        <span class="text-[11px] font-bold px-3 py-1 rounded-full ${isAuditorHere ? 'bg-coral-500/10 text-coral-600' : 'bg-slate-100 text-slate-600'}">
-                            ${isAuditorHere ? '🛡️ Audytor' : '👤 Obserwator'}
-                        </span>
+
+                        {/* Przełącznik profilu (Mama / Córka) */}
+                        <div className="flex bg-gray-100 p-1 rounded-full border border-gray-200">
+                            <button 
+                                onClick={() => setCurrentProfile('Mama')}
+                                className={`px-3 py-1 rounded-full text-xs font-bold transition-all ${currentProfile === 'Mama' ? 'bg-primary text-white shadow-sm' : 'text-gray-500'}`}>
+                                Mama 👩
+                            </button>
+                            <button 
+                                onClick={() => setCurrentProfile('Córka')}
+                                className={`px-3 py-1 rounded-full text-xs font-bold transition-all ${currentProfile === 'Córka' ? 'bg-secondary text-white shadow-sm' : 'text-gray-500'}`}>
+                                Córka 👧
+                            </button>
+                        </div>
                     </div>
 
-                    <div class="mt-4">
-                        <div class="flex justify-between text-xs font-semibold text-slate-600 mb-1.5">
-                            <span>Postęp: ${greenCount}/${ch.targetDays} dni</span>
-                            <span class="text-coral-600 font-extrabold">${percent}%</span>
+                    {/* ZAWARTOŚĆ GŁÓWNA */}
+                    <div className="flex-1 overflow-y-auto p-4 pb-24">
+                        
+                        {/* ZAKŁADKI I FILTRY */}
+                        <div className="flex items-center justify-between mb-4">
+                            <div className="flex space-x-2">
+                                <button 
+                                    onClick={() => setActiveTab('active')}
+                                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${activeTab === 'active' ? 'bg-dark text-white shadow' : 'bg-white text-gray-600 border border-gray-200'}`}>
+                                    W trakcie 🔥
+                                </button>
+                                <button 
+                                    onClick={() => setActiveTab('completed')}
+                                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${activeTab === 'completed' ? 'bg-dark text-white shadow' : 'bg-white text-gray-600 border border-gray-200'}`}>
+                                    Zdobyte 🏆
+                                </button>
+                            </div>
+
+                            <button 
+                                onClick={() => setShowCreateModal(true)}
+                                className="bg-primary hover:bg-opacity-90 text-white w-10 h-10 rounded-2xl flex items-center justify-center shadow-md font-bold text-xl transition-transform active:scale-95">
+                                +
+                            </button>
                         </div>
-                        <div class="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden border border-slate-200">
-                            <div class="bg-gradient-to-r from-coral-500 to-sunny h-full rounded-full" style="width: ${percent}%"></div>
+
+                        {/* FILTRY WIDOKU */}
+                        <div className="flex space-x-2 mb-4 overflow-x-auto pb-1 text-xs">
+                            <button onClick={() => setFilterView('all')} className={`px-3 py-1.5 rounded-lg font-medium whitespace-nowrap ${filterView === 'all' ? 'bg-indigo-50 text-indigo-600 border border-indigo-200' : 'bg-white text-gray-500 border border-gray-200'}`}>
+                                Wszystkie
+                            </button>
+                            <button onClick={() => setFilterView('mine')} className={`px-3 py-1.5 rounded-lg font-medium whitespace-nowrap ${filterView === 'mine' ? 'bg-indigo-50 text-indigo-600 border border-indigo-200' : 'bg-white text-gray-500 border border-gray-200'}`}>
+                                Moje cele ({currentProfile})
+                            </button>
+                            <button onClick={() => setFilterView('assigned')} className={`px-3 py-1.5 rounded-lg font-medium whitespace-nowrap ${filterView === 'assigned' ? 'bg-indigo-50 text-indigo-600 border border-indigo-200' : 'bg-white text-gray-500 border border-gray-200'}`}>
+                                Do oceny jako Audytor
+                            </button>
                         </div>
+
+                        {/* LISTA WYZWAŃ */}
+                        <div className="space-y-3">
+                            {filteredChallenges.length === 0 ? (
+                                <div className="text-center py-12 bg-white rounded-3xl border border-dashed border-gray-200 p-6">
+                                    <div className="text-4xl mb-2">📭</div>
+                                    <p className="text-gray-500 font-medium text-sm">Brak wyzwań w tej zakładce.</p>
+                                    <p className="text-gray-400 text-xs mt-1">Stwórz nowe wyzwanie przyciskiem „+” powyżej.</p>
+                                </div>
+                            ) : (
+                                filteredChallenges.map(challenge => {
+                                    // Obliczanie postępu
+                                    const loggedDays = Object.keys(challenge.logs);
+                                    const greenDays = loggedDays.filter(d => challenge.logs[d].status === 'green').length;
+                                    const progressPercent = Math.round((greenDays / challenge.duration) * 100);
+
+                                    return (
+                                        <div 
+                                            key={challenge.id}
+                                            onClick={() => setSelectedChallenge(challenge)}
+                                            className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer relative overflow-hidden group">
+                                            
+                                            <div className="flex items-start justify-between mb-2">
+                                                <div className="flex items-center space-x-3">
+                                                    <div className="text-3xl bg-gray-50 w-12 h-12 rounded-2xl flex items-center justify-center border border-gray-100">
+                                                        {challenge.emoji}
+                                                    </div>
+                                                    <div>
+                                                        <h3 className="font-bold text-dark text-base">{challenge.title}</h3>
+                                                        <div className="flex items-center space-x-2 mt-0.5">
+                                                            <span className="text-[11px] bg-gray-100 text-gray-600 px-2 py-0.5 rounded-md font-medium">
+                                                                Realizuje: <b>{challenge.auditedBy}</b>
+                                                            </span>
+                                                            <span className="text-[11px] bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-md font-medium">
+                                                                Audytor: <b>{challenge.auditor}</b>
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div className="text-right">
+                                                    <span className="text-sm font-extrabold text-primary">{greenDays} / {challenge.duration}</span>
+                                                    <p className="text-[10px] text-gray-400 font-semibold">dni</p>
+                                                </div>
+                                            </div>
+
+                                            {/* Pasek postępu */}
+                                            <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden mt-3">
+                                                <div 
+                                                    className="bg-gradient-to-r from-primary to-secondary h-full rounded-full transition-all duration-500" 
+                                                    style={{ width: `${Math.min(progressPercent, 100)}%` }}>
+                                                </div>
+                                            </div>
+
+                                            {/* Mini podgląd kafelków na liście */}
+                                            <div className="flex space-x-1 mt-3 overflow-x-auto pb-1">
+                                                {Array.from({ length: challenge.duration }).map((_, idx) => {
+                                                    const dayNum = idx + 1;
+                                                    const log = challenge.logs[dayNum];
+                                                    let bg = 'bg-gray-100 border-gray-200';
+                                                    if (log) {
+                                                        if (log.status === 'green') bg = 'bg-emerald-400 border-emerald-500 text-white';
+                                                        else if (log.status === 'yellow') bg = 'bg-amber-400 border-amber-500 text-white';
+                                                        else if (log.status === 'red') bg = 'bg-rose-400 border-rose-500 text-white';
+                                                        else if (log.status === 'blue') bg = 'bg-blue-400 border-blue-500 text-white';
+                                                    }
+                                                    return (
+                                                        <div key={idx} className={`w-6 h-6 rounded-lg text-[10px] font-bold flex items-center justify-center border flex-shrink-0 ${bg}`}>
+                                                            {dayNum}
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    );
+                                })
+                            )}
+                        </div>
+
                     </div>
-                `;
-                list.appendChild(card);
-            });
+
+                    {/* DOLNY PASEK NAWIGACYJNY */}
+                    <div className="bg-white border-t border-gray-100 py-3 px-6 flex justify-around items-center absolute bottom-0 left-0 right-0 z-10 shadow-lg">
+                        <button onClick={() => { setActiveTab('active'); setSelectedChallenge(null); }} className="flex flex-col items-center text-primary">
+                            <span className="text-xl">🏠</span>
+                            <span className="text-[10px] font-bold mt-1">Celomat</span>
+                        </button>
+                        <button onClick={() => setShowCreateModal(true)} className="flex flex-col items-center text-gray-400 hover:text-primary transition-colors">
+                            <span className="text-xl">➕</span>
+                            <span className="text-[10px] font-medium mt-1">Nowy Cel</span>
+                        </button>
+                    </div>
+
+                    {/* MODAL SZCZEGÓŁÓW WYZWANIA */}
+                    {selectedChallenge && activeLogDay === null && (
+                        <div className="absolute inset-0 bg-black bg-opacity-40 z-30 flex flex-col justify-end backdrop-blur-xs animate-fadeIn">
+                            <div className="bg-white rounded-t-[32px] p-6 max-h-[90vh] overflow-y-auto shadow-2xl flex flex-col">
+                                
+                                <div className="flex justify-between items-center mb-4">
+                                    <div className="flex items-center space-x-3">
+                                        <span className="text-3xl">{selectedChallenge.emoji}</span>
+                                        <div>
+                                            <h2 className="font-extrabold text-xl text-dark">{selectedChallenge.title}</h2>
+                                            <p className="text-xs text-gray-400">Tryb: {selectedChallenge.mode === 'streak' ? 'Ciągły (Streak)' : 'Suma dni'}</p>
+                                        </div>
+                                    </div>
+                                    <button 
+                                        onClick={() => setSelectedChallenge(null)}
+                                        className="w-8 h-8 rounded-full bg-gray-100 text-gray-500 flex items-center justify-center font-bold">
+                                        ✕
+                                    </button>
+                                </div>
+
+                                {selectedChallenge.status === 'completed' && (
+                                    <div className="bg-gradient-to-r from-amber-50 to-amber-100 border border-amber-200 p-4 rounded-2xl mb-4 text-center">
+                                        <div className="text-3xl mb-1">🎉</div>
+                                        <h3 className="font-bold text-amber-800 text-sm">Wyzwanie ukończone sukcesem!</h3>
+                                        <p className="text-xs text-amber-600 mt-0.5">Nagroda odblokowana! Oklaski dla {selectedChallenge.auditedBy}!</p>
+                                    </div>
+                                )}
+
+                                <h4 className="font-bold text-sm text-dark mb-2">Siatka Postępów ({selectedChallenge.duration} dni)</h4>
+                                <div className="grid grid-cols-5 gap-2 mb-6">
+                                    {Array.from({ length: selectedChallenge.duration }).map((_, idx) => {
+                                        const dayNum = idx + 1;
+                                        const log = selectedChallenge.logs[dayNum];
+                                        let bg = 'bg-gray-50 border-gray-200 text-dark';
+                                        let icon = '';
+                                        if (log) {
+                                            if (log.status === 'green') { bg = 'bg-emerald-500 border-emerald-600 text-white'; icon = '✓'; }
+                                            else if (log.status === 'yellow') { bg = 'bg-amber-400 border-amber-500 text-white'; icon = '⚡'; }
+                                            else if (log.status === 'red') { bg = 'bg-rose-500 border-rose-600 text-white'; icon = '✕'; }
+                                            else if (log.status === 'blue') { bg = 'bg-blue-400 border-blue-500 text-white'; icon = '💤'; }
+                                        }
+
+                                        const canAudit = currentProfile === selectedChallenge.auditor;
+
+                                        return (
+                                            <div 
+                                                key={idx}
+                                                onClick={() => {
+                                                    if (canAudit) {
+                                                        setActiveLogDay(dayNum);
+                                                        const existing = selectedChallenge.logs[dayNum] || {};
+                                                        setAuditStatus(existing.status || 'green');
+                                                        setAuditNote(existing.note || '');
+                                                        setAuditPhoto(existing.photo || null);
+                                                        const checks = {};
+                                                        if (existing.checked) {
+                                                            existing.checked.forEach((val, i) => checks[i] = val);
+                                                        }
+                                                        setAuditCheckedCriteria(checks);
+                                                    }
+                                                }}
+                                                className={`p-3 rounded-2xl border flex flex-col items-center justify-center transition-all ${bg} ${canAudit ? 'cursor-pointer hover:opacity-90 active:scale-95 shadow-xs' : 'opacity-90'}`}>
+                                                <span className="text-xs font-bold">Dzień {dayNum}</span>
+                                                <span className="text-lg font-extrabold mt-0.5">{icon}</span>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+
+                                {currentProfile === selectedChallenge.auditor && (
+                                    <p className="text-[11px] text-indigo-600 font-medium bg-indigo-50 p-2.5 rounded-xl text-center mb-4">
+                                        💡 Kliknij w dowolny kafelek powyżej, aby ocenić dzień jako Audytor ({currentProfile}).
+                                    </p>
+                                )}
+
+                                {/* Kryteria wyzwania */}
+                                <div className="bg-gray-50 p-4 rounded-2xl mb-6 border border-gray-100">
+                                    <h4 className="font-bold text-xs text-gray-500 uppercase tracking-wider mb-2">Kryteria oceny</h4>
+                                    <ul className="space-y-1.5 text-xs text-gray-700">
+                                        {selectedChallenge.criteria.map((c, i) => (
+                                            <li key={i} className="flex items-center space-x-2">
+                                                <span className="w-1.5 h-1.5 rounded-full bg-primary"></span>
+                                                <span>{c}</span>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+
+                                {/* STREFA KIBICOWANIA */}
+                                <div className="border-t border-gray-100 pt-4 mt-auto">
+                                    <h4 className="font-bold text-sm text-dark mb-3">Strefa Kibica i Wsparcia 💬</h4>
+                                    <div className="space-y-2 max-h-36 overflow-y-auto mb-3">
+                                        {selectedChallenge.cheers.length === 0 ? (
+                                            <p className="text-xs text-gray-400 italic">Brak wiadomości. Napisz coś miłego jako pierwszy!</p>
+                                        ) : (
+                                            selectedChallenge.cheers.map(ch => (
+                                                <div key={ch.id} className="bg-gray-50 p-2.5 rounded-xl border border-gray-100">
+                                                    <div className="flex justify-between items-center mb-1">
+                                                        <span className="font-bold text-xs text-indigo-600">{ch.author}</span>
+                                                        <span className="text-[10px] text-gray-400">{ch.time}</span>
+                                                    </div>
+                                                    <p className="text-xs text-dark">{ch.text}</p>
+                                                </div>
+                                            ))
+                                        )}
+                                    </div>
+
+                                    <div className="flex space-x-2">
+                                        <input 
+                                            type="text"
+                                            placeholder="Napisz wspierającą wiadomość..."
+                                            value={newCheerText}
+                                            onChange={(e) => setNewCheerText(e.target.value)}
+                                            className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-primary"
+                                        />
+                                        <button 
+                                            onClick={() => addCheer(selectedChallenge.id)}
+                                            className="bg-secondary text-white px-4 py-2 rounded-xl text-xs font-bold shadow-sm">
+                                            Wyślij
+                                        </button>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+                    )}
+
+                    {/* MODAL AUDYTU DNIA */}
+                    {activeLogDay !== null && selectedChallenge && (
+                        <div className="absolute inset-0 bg-black bg-opacity-50 z-40 flex flex-col justify-end backdrop-blur-xs animate-fadeIn">
+                            <div className="bg-white rounded-t-[32px] p-6 max-h-[90vh] overflow-y-auto shadow-2xl flex flex-col">
+                                <div className="flex justify-between items-center mb-4">
+                                    <h3 className="font-extrabold text-lg text-dark">Audyt: Dzień {activeLogDay}</h3>
+                                    <button onClick={() => setActiveLogDay(null)} className="w-8 h-8 rounded-full bg-gray-100 text-gray-500 flex items-center justify-center font-bold">✕</button>
+                                </div>
+
+                                {/* Wybór statusu */}
+                                <label className="text-xs font-bold text-gray-600 mb-2 block">Status dnia:</label>
+                                <div className="grid grid-cols-2 gap-2 mb-4">
+                                    <button 
+                                        onClick={() => setAuditStatus('green')}
+                                        className={`py-2.5 px-3 rounded-xl text-xs font-bold border flex items-center justify-center space-x-2 ${auditStatus === 'green' ? 'bg-emerald-500 text-white border-emerald-600 shadow' : 'bg-white text-gray-600 border-gray-200'}`}>
+                                        <span>🟢 Zaliczone</span>
+                                    </button>
+                                    <button 
+                                        onClick={() => setAuditStatus('yellow')}
+                                        className={`py-2.5 px-3 rounded-xl text-xs font-bold border flex items-center justify-center space-x-2 ${auditStatus === 'yellow' ? 'bg-amber-400 text-white border-amber-500 shadow' : 'bg-white text-gray-600 border-gray-200'}`}>
+                                        <span>🟡 Warunkowe</span>
+                                    </button>
+                                    <button 
+                                        onClick={() => setAuditStatus('red')}
+                                        className={`py-2.5 px-3 rounded-xl text-xs font-bold border flex items-center justify-center space-x-2 ${auditStatus === 'red' ? 'bg-rose-500 text-white border-rose-600 shadow' : 'bg-white text-gray-600 border-gray-200'}`}>
+                                        <span>🔴 Niezaliczone</span>
+                                    </button>
+                                    <button 
+                                        onClick={() => setAuditStatus('blue')}
+                                        className={`py-2.5 px-3 rounded-xl text-xs font-bold border flex items-center justify-center space-x-2 ${auditStatus === 'blue' ? 'bg-blue-400 text-white border-blue-500 shadow' : 'bg-white text-gray-600 border-gray-200'}`}>
+                                        <span>🔵 Dzień pauzy</span>
+                                    </button>
+                                </div>
+
+                                {/* Checklista kryteriów */}
+                                <label className="text-xs font-bold text-gray-600 mb-2 block">Spełnione kryteria:</label>
+                                <div className="space-y-2 mb-4">
+                                    {selectedChallenge.criteria.map((criterion, idx) => (
+                                        <label key={idx} className="flex items-center space-x-3 bg-gray-50 p-3 rounded-xl border border-gray-100 cursor-pointer">
+                                            <input 
+                                                type="checkbox"
+                                                checked={!!auditCheckedCriteria[idx]}
+                                                onChange={(e) => setAuditCheckedCriteria({...auditCheckedCriteria, [idx]: e.target.checked})}
+                                                className="w-4 h-4 accent-primary rounded"
+                                            />
+                                            <span className="text-xs font-medium text-dark">{criterion}</span>
+                                        </label>
+                                    ))}
+                                </div>
+
+                                {/* Notatka */}
+                                <label className="text-xs font-bold text-gray-600 mb-1 block">Notatka Audytora:</label>
+                                <textarea 
+                                    value={auditNote}
+                                    onChange={(e) => setAuditNote(e.target.value)}
+                                    placeholder="Wpisz komentarz (np. Super robota, ale pod łóżkiem został papierek)..."
+                                    className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-xs focus:outline-none focus:border-primary mb-4 h-20 resize-none"
+                                />
+
+                                <button 
+                                    onClick={saveAudit}
+                                    className="w-full bg-primary hover:bg-opacity-90 text-white py-3.5 rounded-2xl font-bold text-sm shadow-md transition-transform active:scale-95">
+                                    Zapisz Audyt Dnia
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* MODAL TWORZENIA WYZWANIA */}
+                    {showCreateModal && (
+                        <div className="absolute inset-0 bg-black bg-opacity-50 z-40 flex flex-col justify-end backdrop-blur-xs animate-fadeIn">
+                            <form onSubmit={handleCreateChallenge} className="bg-white rounded-t-[32px] p-6 max-h-[90vh] overflow-y-auto shadow-2xl flex flex-col">
+                                <div className="flex justify-between items-center mb-4">
+                                    <h3 className="font-extrabold text-lg text-dark">Nowy Celomat 🎯</h3>
+                                    <button type="button" onClick={() => setShowCreateModal(false)} className="w-8 h-8 rounded-full bg-gray-100 text-gray-500 flex items-center justify-center font-bold">✕</button>
+                                </div>
+
+                                <label className="text-xs font-bold text-gray-600 mb-1 block">Nazwa celu / nagrody:</label>
+                                <input 
+                                    type="text"
+                                    required
+                                    placeholder="np. Nowa suszarka, 30 dni bez cukru..."
+                                    value={newTitle}
+                                    onChange={(e) => setNewTitle(e.target.value)}
+                                    className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-xs focus:outline-none focus:border-primary mb-3"
+                                />
+
+                                <div className="grid grid-cols-2 gap-3 mb-3">
+                                    <div>
+                                        <label className="text-xs font-bold text-gray-600 mb-1 block">Ikona (Emoji):</label>
+                                        <input 
+                                            type="text"
+                                            value={newEmoji}
+                                            onChange={(e) => setNewEmoji(e.target.value)}
+                                            className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-center text-lg focus:outline-none focus:border-primary"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-xs font-bold text-gray-600 mb-1 block">Liczba dni ($N$):</label>
+                                        <input 
+                                            type="number"
+                                            min="1"
+                                            max="60"
+                                            value={newDuration}
+                                            onChange={(e) => setNewDuration(e.target.value)}
+                                            className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-xs font-bold text-center focus:outline-none focus:border-primary"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-3 mb-3">
+                                    <div>
+                                        <label className="text-xs font-bold text-gray-600 mb-1 block">Realizuje:</label>
+                                        <select 
+                                            value={newAuditedBy}
+                                            onChange={(e) => setNewAuditedBy(e.target.value)}
+                                            className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-xs font-bold focus:outline-none focus:border-primary">
+                                            <option value="Mama">Mama</option>
+                                            <option value="Córka">Córka</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="text-xs font-bold text-gray-600 mb-1 block">Audytor:</label>
+                                        <select 
+                                            value={newAuditor}
+                                            onChange={(e) => setNewAuditor(e.target.value)}
+                                            className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-xs font-bold focus:outline-none focus:border-primary">
+                                            <option value="Mama">Mama</option>
+                                            <option value="Córka">Córka</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <label className="text-xs font-bold text-gray-600 mb-1 block">Kryteria oceny (co ma być zrobione):</label>
+                                <div className="space-y-2 mb-4">
+                                    {newCriteria.map((crit, idx) => (
+                                        <div key={idx} className="flex space-x-2">
+                                            <input 
+                                                type="text"
+                                                value={crit}
+                                                onChange={(e) => {
+                                                    const updated = [...newCriteria];
+                                                    updated[idx] = e.target.value;
+                                                    setNewCriteria(updated);
+                                                }}
+                                                className="flex-1 bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-xs focus:outline-none focus:border-primary"
+                                            />
+                                            {newCriteria.length > 1 && (
+                                                <button 
+                                                    type="button" 
+                                                    onClick={() => setNewCriteria(newCriteria.filter((_, i) => i !== idx))}
+                                                    className="px-3 text-rose-500 font-bold text-xs bg-rose-50 rounded-xl">
+                                                    ✕
+                                                </button>
+                                            )}
+                                        </div>
+                                    ))}
+                                    <button 
+                                        type="button"
+                                        onClick={() => setNewCriteria([...newCriteria, ''])}
+                                        className="w-full py-2 bg-gray-100 text-gray-600 rounded-xl text-xs font-bold hover:bg-gray-200 transition-colors">
+                                        + Dodaj kolejne kryterium
+                                    </button>
+                                </div>
+
+                                <button 
+                                    type="submit"
+                                    className="w-full bg-primary hover:bg-opacity-90 text-white py-3.5 rounded-2xl font-bold text-sm shadow-md transition-transform active:scale-95">
+                                    Uruchom Celomat! 🚀
+                                </button>
+                            </form>
+                        </div>
+                    )}
+
+                </div>
+            );
         }
 
-        function updateAuditBadge() {
-            const needsAudit = challenges.some(c => c.status === 'ACTIVE' && c.auditor === currentProfile);
-            const badge = document.getElementById('audit-badge');
-            if (badge) {
-                if (needsAudit) badge.classList.remove('hidden');
-                else badge.classList.add('hidden');
-            }
-        }
-
-        function openChallengeDetails(challengeId) {
-            activeChallengeId = challengeId;
-            const ch = challenges.find(c => c.id === challengeId);
-            if (!ch) return;
-
-            switchView('details');
-
-            document.getElementById('detail-emoji').innerText = ch.emoji;
-            document.getElementById('detail-title').innerText = ch.title;
-            document.getElementById('detail-participant').innerText = ch.participant;
-            document.getElementById('detail-auditor').innerText = ch.auditor;
-            document.getElementById('detail-badge-type').innerText = ch.auditor === 'Samokontrola' ? 'Osobiste' : 'Audytowane';
-            document.getElementById('detail-badge-mode').innerText = ch.mode === 'STREAK' ? 'Tryb ciągły' : 'Suma dni';
-
-            let greenCount = Object.values(ch.logs).filter(l => l.status === 'GREEN').length;
-            let percent = Math.min(100, Math.round((greenCount / ch.targetDays) * 100));
-            document.getElementById('detail-progress-text').innerText = `${greenCount} / ${ch.targetDays} dni`;
-            document.getElementById('detail-percentage').innerText = `${percent}%`;
-            document.getElementById('detail-progress-bar').style.width = `${percent}%`;
-
-            const tagsContainer = document.getElementById('detail-criteria-tags');
-            tagsContainer.innerHTML = '';
-            ch.criteria.forEach(crit => {
-                const tag = document.createElement('span');
-                tag.className = 'bg-white border border-slate-200 text-slate-700 text-xs px-2.5 py-1 rounded-xl shadow-xs font-semibold';
-                tag.innerText = `✓ ${crit}`;
-                tagsContainer.appendChild(tag);
-            });
-
-            renderTilesGrid(ch);
-            renderCheersFeed(ch);
-        }
-
-        function renderTilesGrid(ch) {
-            const grid = document.getElementById('tiles-grid');
-            grid.innerHTML = '';
-
-            let totalDays = ch.targetDays;
-            const loggedDays = Object.keys(ch.logs).map(Number);
-            const maxLogged = loggedDays.length > 0 ? Math.max(...loggedDays) : 0;
-            if (maxLogged > totalDays) totalDays = maxLogged;
-
-            for (let i = 1; i <= totalDays; i++) {
-                const log = ch.logs[i];
-                let statusColor = 'bg-slate-100 border-slate-200 text-slate-600';
-                let indicator = '';
-
-                if (log) {
-                    if (log.status === 'GREEN') statusColor = 'bg-mint-500 border-mint-600 text-white shadow-xs';
-                    else if (log.status === 'YELLOW') statusColor = 'bg-sunny border-amber-400 text-slate-900';
-                    else if (log.status === 'RED') statusColor = 'bg-raspberry border-rose-700 text-white';
-                    else if (log.status === 'BLUE') statusColor = 'bg-skyblue border-sky-600 text-white';
-                    if (log.photo) indicator += '📷';
-                }
-
-                const tile = document.createElement('button');
-                tile.className = `aspect-square rounded-2xl border-2 flex flex-col items-center justify-center font-heading font-bold text-sm transition-all active:scale-95 relative ${statusColor}`;
-                tile.innerHTML = `
-                    <span class="text-[10px] opacity-75 uppercase">Dzień</span>
-                    <span class="text-base">${i}</span>
-                    <span class="absolute bottom-1.5 text-[10px]">${indicator}</span>
-                `;
-                tile.onclick = () => openAuditModal(i);
-                grid.appendChild(tile);
-            }
-        }
-
-        function openAuditModal(dayNum) {
-            activeDayNumber = dayNum;
-            const ch = challenges.find(c => c.id === activeChallengeId);
-            if (!ch) return;
-
-            document.getElementById('audit-day-badge').innerText = `Dzień ${dayNum}`;
-            document.getElementById('audit-challenge-title').innerText = ch.title;
-            
-            const log = ch.logs[dayNum] || { status: 'GREEN', criteria: {}, note: '', photo: null, date: '16.11' };
-            activeStatus = log.status;
-            tempPhotoData = log.photo;
-
-            document.getElementById('audit-date').innerText = log.date || '16.11';
-            document.getElementById('audit-note').value = log.note || '';
-
-            const preview = document.getElementById('audit-photo-preview');
-            const img = document.getElementById('audit-photo-img');
-            const statusText = document.getElementById('audit-photo-status');
-            if (log.photo) {
-                img.src = log.photo;
-                preview.classList.remove('hidden');
-                statusText.innerText = 'Załadowane';
-            } else {
-                preview.classList.add('hidden');
-                statusText.innerText = 'Brak';
-            }
-
-            ['GREEN', 'YELLOW', 'RED', 'BLUE'].forEach(s => {
-                const btn = document.getElementById(`status-btn-${s}`);
-                if (s === activeStatus) btn.classList.add('ring-2', 'ring-coral-500', 'font-bold');
-                else btn.classList.remove('ring-2', 'ring-coral-500', 'font-bold');
-            });
-
-            const criteriaList = document.getElementById('audit-criteria-list');
-            criteriaList.innerHTML = '';
-            ch.criteria.forEach((crit, index) => {
-                const isChecked = log.criteria[index] === true;
-                const div = document.createElement('label');
-                div.className = 'flex items-center space-x-2.5 text-xs text-slate-700 cursor-pointer p-1.5 hover:bg-slate-100 rounded-xl font-medium';
-                div.innerHTML = `
-                    <input type="checkbox" ${isChecked ? 'checked' : ''} data-index="${index}" class="audit-criterion-checkbox w-4 h-4 rounded text-coral-500">
-                    <span class="flex-1">${crit}</span>
-                `;
-                criteriaList.appendChild(div);
-            });
-
-            const isAuditor = ch.auditor === currentProfile || ch.auditor === 'Samokontrola';
-            const notice = document.getElementById('audit-permission-notice');
-            const saveBtn = document.getElementById('audit-save-btn');
-            const noteInput = document.getElementById('audit-note');
-
-            if (!isAuditor) {
-                notice.classList.remove('hidden');
-                saveBtn.classList.add('hidden');
-                noteInput.disabled = true;
-            } else {
-                notice.classList.add('hidden');
-                saveBtn.classList.remove('hidden');
-                noteInput.disabled = false;
-            }
-
-            document.getElementById('modal-audit').classList.remove('hidden');
-            document.getElementById('modal-audit').classList.add('flex');
-        }
-
-        function closeAuditModal() {
-            document.getElementById('modal-audit').classList.remove('flex');
-            document.getElementById('modal-audit').classList.add('hidden');
-        }
-
-        function setAuditStatus(status) {
-            activeStatus = status;
-            ['GREEN', 'YELLOW', 'RED', 'BLUE'].forEach(s => {
-                const btn = document.getElementById(`status-btn-${s}`);
-                if (s === status) btn.classList.add('ring-2', 'ring-coral-500', 'font-bold');
-                else btn.classList.remove('ring-2', 'ring-coral-500', 'font-bold');
-            });
-        }
-
-        function handlePhotoUpload(event) {
-            const file = event.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    tempPhotoData = e.target.result;
-                    document.getElementById('audit-photo-img').src = tempPhotoData;
-                    document.getElementById('audit-photo-preview').classList.remove('hidden');
-                    document.getElementById('audit-photo-status').innerText = 'Załadowane';
-                };
-                reader.readAsDataURL(file);
-            }
-        }
-
-        function saveAudit() {
-            const ch = challenges.find(c => c.id === activeChallengeId);
-            if (!ch) return;
-
-            const checkboxes = document.querySelectorAll('.audit-criterion-checkbox');
-            const criteriaResults = {};
-            checkboxes.forEach(cb => criteriaResults[cb.getAttribute('data-index')] = cb.checked);
-
-            ch.logs[activeDayNumber] = {
-                status: activeStatus,
-                criteria: criteriaResults,
-                note: document.getElementById('audit-note').value,
-                photo: tempPhotoData,
-                date: '16.11'
-            };
-
-            if (ch.mode === 'STREAK' && (activeStatus === 'RED' || activeStatus === 'BLUE')) {
-                ch.targetDays += 1;
-            }
-
-            let greenCount = Object.values(ch.logs).filter(l => l.status === 'GREEN').length;
-            closeAuditModal();
-            openChallengeDetails(ch.id);
-
-            if (greenCount >= ch.targetDays && ch.status !== 'COMPLETED') {
-                ch.status = 'COMPLETED';
-                triggerCelebration();
-            }
-        }
-
-        function renderCheersFeed(ch) {
-            const feed = document.getElementById('cheers-feed');
-            feed.innerHTML = '';
-            if (ch.cheers.length === 0) {
-                feed.innerHTML = `<p class="text-xs text-slate-400 italic text-center py-2">Brak wiadomości. Bądź pierwszy!</p>`;
-                return;
-            }
-            ch.cheers.forEach(item => {
-                const div = document.createElement('div');
-                div.className = 'bg-slate-50 p-3 rounded-2xl border border-slate-200 text-xs flex justify-between items-center';
-                div.innerHTML = `<div><strong class="text-coral-600 font-bold">${item.sender}:</strong> <span class="text-slate-700 ml-1 font-medium">${item.message}</span></div><span class="text-[10px] text-slate-400">${item.time}</span>`;
-                feed.appendChild(div);
-            });
-        }
-
-        function sendQuickCheer(emojiOrText) {
-            const ch = challenges.find(c => c.id === activeChallengeId);
-            if (!ch) return;
-            ch.cheers.push({ sender: currentProfile, message: emojiOrText + ' Super!', time: 'Teraz' });
-            renderCheersFeed(ch);
-        }
-
-        function postCheer() {
-            const input = document.getElementById('cheer-input');
-            const msg = input.value.trim();
-            if (!msg) return;
-            const ch = challenges.find(c => c.id === activeChallengeId);
-            if (!ch) return;
-            ch.cheers.push({ sender: currentProfile, message: msg, time: 'Teraz' });
-            input.value = '';
-            renderCheersFeed(ch);
-        }
-
-        function openNewChallengeModal() {
-            document.getElementById('modal-new-challenge').classList.remove('hidden');
-            document.getElementById('modal-new-challenge').classList.add('flex');
-        }
-
-        function closeNewChallengeModal() {
-            document.getElementById('modal-new-challenge').classList.remove('flex');
-            document.getElementById('modal-new-challenge').classList.add('hidden');
-        }
-
-        function addCriterionInput() {
-            const container = document.getElementById('criteria-inputs-container');
-            const div = document.createElement('div');
-            div.className = 'flex gap-2';
-            div.innerHTML = `
-                <input type="text" placeholder="Kryterium oceny" required class="criterion-input flex-1 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-2 text-xs focus:outline-none focus:border-coral-500 font-medium">
-                <button type="button" onclick="removeCriterionInput(this)" class="px-3 text-slate-400 font-bold">✕</button>
-            `;
-            container.appendChild(div);
-        }
-
-        function removeCriterionInput(btn) {
-            const container = document.getElementById('criteria-inputs-container');
-            if (container.children.length > 1) btn.parentElement.remove();
-        }
-
-        function handleCreateChallenge(event) {
-            event.preventDefault();
-            const criteria = [];
-            document.querySelectorAll('.criterion-input').forEach(inp => { if (inp.value.trim()) criteria.push(inp.value.trim()); });
-
-            const newCh = {
-                id: 'ch-' + Date.now(),
-                title: document.getElementById('new-title').value,
-                emoji: document.getElementById('new-emoji').value,
-                participant: document.getElementById('new-participant').value,
-                auditor: document.getElementById('new-auditor').value,
-                mode: document.getElementById('new-mode').value,
-                targetDays: parseInt(document.getElementById('new-days').value) || 14,
-                status: 'ACTIVE',
-                criteria: criteria,
-                logs: {},
-                cheers: [{ sender: currentProfile, message: 'Wyzwanie rozpoczęte! 🎯', time: 'Teraz' }]
-            };
-
-            challenges.unshift(newCh);
-            closeNewChallengeModal();
-            renderHub();
-            updateAuditBadge();
-        }
-
-        function triggerCelebration() {
-            document.getElementById('modal-celebration').classList.remove('hidden');
-            document.getElementById('modal-celebration').classList.add('flex');
-            startFireworks();
-        }
-
-        function closeCelebrationModal() {
-            document.getElementById('modal-celebration').classList.remove('flex');
-            document.getElementById('modal-celebration').classList.add('hidden');
-            stopFireworks();
-            renderHub();
-        }
-
-        let fireworksInterval = null;
-        function startFireworks() {
-            const canvas = document.getElementById('fireworks-canvas');
-            const ctx = canvas.getContext('2d');
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-
-            let particles = [];
-            function createParticle(x, y) {
-                const count = 35;
-                const angleStep = (Math.PI * 2) / count;
-                const colors = ['#FF6B6B', '#4ECDC4', '#FFD166', '#EF476F', '#118AB2'];
-                for (let i = 0; i < count; i++) {
-                    const angle = i * angleStep;
-                    const speed = Math.random() * 6 + 2;
-                    particles.push({
-                        x: x, y: y,
-                        vx: Math.cos(angle) * speed,
-                        vy: Math.sin(angle) * speed,
-                        alpha: 1,
-                        color: colors[Math.floor(Math.random() * colors.length)]
-                    });
-                }
-            }
-
-            createParticle(canvas.width / 2, canvas.height / 3);
-
-            fireworksInterval = setInterval(() => {
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                if (Math.random() < 0.4) createParticle(Math.random() * canvas.width, Math.random() * (canvas.height / 2));
-
-                particles.forEach((p, index) => {
-                    p.x += p.vx;
-                    p.y += p.vy;
-                    p.vy += 0.06;
-                    p.alpha -= 0.015;
-
-                    ctx.save();
-                    ctx.globalAlpha = Math.max(0, p.alpha);
-                    ctx.fillStyle = p.color;
-                    ctx.beginPath();
-                    ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
-                    ctx.fill();
-                    ctx.restore();
-
-                    if (p.alpha <= 0) particles.splice(index, 1);
-                });
-            }, 25);
-        }
-
-        function stopFireworks() {
-            if (fireworksInterval) clearInterval(fireworksInterval);
-            const canvas = document.getElementById('fireworks-canvas');
-            const ctx = canvas.getContext('2d');
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-        }
+        ReactDOM.render(<App />, document.getElementById('root'));
     </script>
 </body>
 </html>
-```
-eof
-
-### Podsumowanie zmian
-Przebudowałem aplikację tak, aby zajmowała **pełną szerokość i wysokość ekranu mobilnego** (brak ciasnych ramek czy „zakładek do książki”). Zastosowałem duże, czytelne karty wyzwań, wygodny dolny pasek nawigacji z szybkim dostępem do dodawania celów oraz przestronny interfejs z żywymi, nowoczesnymi kolorami dla młodych dorosłych. Możesz teraz w pełni przetestować ekrany, audyt i fajerwerki!
