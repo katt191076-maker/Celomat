@@ -11,7 +11,10 @@
     <meta name="apple-mobile-web-app-title" content="Celomat">
     <meta name="theme-color" content="#FF6B6B">
     
-    <!-- Ikona aplikacji dla urządzeń mobilnych (Base64 SVG - radosny symbol prezentu/celu) -->
+    <!-- Link do manifestu PWA -->
+    <link rel="manifest" href="manifest.json">
+    
+    <!-- Ikona aplikacji dla urządzeń mobilnych -->
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='110' fill='%23FF6B6B'/><text x='50%25' y='55%25' font-size='240' text-anchor='middle' dominant-baseline='central'>🎁</text></svg>">
     <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='110' fill='%23FF6B6B'/><text x='50%25' y='55%25' font-size='240' text-anchor='middle' dominant-baseline='central'>🎁</text></svg>">
 
@@ -46,7 +49,7 @@
     <script type="text/babel">
         function App() {
             const [currentProfile, setCurrentProfile] = React.useState('Mama');
-            const [activeTab, setActiveTab] = React.useState('active'); // active, completed, profile
+            const [activeTab, setActiveTab] = React.useState('active'); // active, completed
             const [filterView, setFilterView] = React.useState('all'); // all, mine, assigned
             
             const [challenges, setChallenges] = React.useState([
@@ -56,37 +59,21 @@
                     emoji: '💇‍♀️',
                     duration: 14,
                     mode: 'streak', // streak lub accumulate
-                    type: 'audited', // audited, solo, duel
+                    type: 'audited', 
                     auditedBy: 'Córka',
                     auditor: 'Mama',
                     criteria: ['Łóżko pościelone', 'Biurko i podłoga czyste', 'Brak ubrań na krześle', 'Pokój wywietrzony'],
                     status: 'active',
                     logs: {
-                        1: { status: 'green', note: 'Świetny początek!', photo: null, checked: [true, true, true, true] },
-                        2: { status: 'green', note: 'Super porządek', photo: null, checked: [true, true, true, true] },
-                        3: { status: 'red', note: 'Zostawione ubrania na fotelu', photo: null, checked: [true, false, true, true] },
-                        4: { status: 'green', note: 'Poprawione wzorowo', photo: null, checked: [true, true, true, true] },
-                        5: { status: 'blue', note: 'Dzień wyjazdu - pauza', photo: null, checked: [] }
+                        1: { status: 'green', note: 'Świetny początek!', checked: [true, true, true, true] },
+                        2: { status: 'green', note: 'Super porządek', checked: [true, true, true, true] },
+                        3: { status: 'red', note: 'Zostawione ubrania na fotelu', checked: [true, false, true, true] },
+                        4: { status: 'green', note: 'Poprawione wzorowo', checked: [true, true, true, true] },
+                        5: { status: 'blue', note: 'Dzień wyjazdu - pauza', checked: [] }
                     },
                     cheers: [
                         { id: 1, author: 'Mama', text: 'Bądź grzeczna, suszarka czeka! 🔥', time: 'Wczoraj 20:15' }
                     ]
-                },
-                {
-                    id: 2,
-                    title: 'Wczesne wstawanie o 6:30',
-                    emoji: '🌅',
-                    duration: 7,
-                    mode: 'streak',
-                    type: 'solo',
-                    auditedBy: 'Mama',
-                    auditor: 'Mama',
-                    criteria: ['Pobudka przy pierwszym budziku', 'Szklanka wody wypita'],
-                    status: 'active',
-                    logs: {
-                        1: { status: 'green', note: 'Dzielnie wstałam', photo: null, checked: [true, true] }
-                    },
-                    cheers: []
                 }
             ]);
 
@@ -94,12 +81,11 @@
             const [selectedChallenge, setSelectedChallenge] = React.useState(null);
             const [activeLogDay, setActiveLogDay] = React.useState(null);
             
-            // Stany formularza nowog wyzwania
+            // Stany formularza nowego wyzwania
             const [newTitle, setNewTitle] = React.useState('');
             const [newEmoji, setNewEmoji] = React.useState('🎯');
             const [newDuration, setNewDuration] = React.useState(14);
             const [newMode, setNewMode] = React.useState('streak');
-            const [newType, setNewType] = React.useState('audited');
             const [newAuditedBy, setNewAuditedBy] = React.useState('Córka');
             const [newAuditor, setNewAuditor] = React.useState('Mama');
             const [newCriteria, setNewCriteria] = React.useState(['Kryterium 1', 'Kryterium 2']);
@@ -108,7 +94,6 @@
             const [auditStatus, setAuditStatus] = React.useState('green');
             const [auditNote, setAuditNote] = React.useState('');
             const [auditCheckedCriteria, setAuditCheckedCriteria] = React.useState({});
-            const [auditPhoto, setAuditPhoto] = React.useState(null);
 
             // Stan kibicowania
             const [newCheerText, setNewCheerText] = React.useState('');
@@ -134,7 +119,7 @@
                     emoji: newEmoji,
                     duration: parseInt(newDuration),
                     mode: newMode,
-                    type: newType,
+                    type: 'audited',
                     auditedBy: newAuditedBy,
                     auditor: newAuditor,
                     criteria: newCriteria.filter(c => c.trim() !== ''),
@@ -154,30 +139,34 @@
 
                 const updatedChallenges = challenges.map(c => {
                     if (c.id === selectedChallenge.id) {
-                        const updatedLogs = {
+                        let updatedLogs = {
                             ...c.logs,
                             [activeLogDay]: {
                                 status: auditStatus,
                                 note: auditNote,
-                                photo: auditPhoto,
                                 checked: selectedChallenge.criteria.map((_, idx) => !!auditCheckedCriteria[idx])
                             }
                         };
 
+                        // Obsługa trybu ciągłego (Streak): w przypadku dnia czerwonego wydłużamy siatkę o 1 dzień
+                        let currentDuration = c.duration;
+                        if (c.mode === 'streak' && auditStatus === 'red') {
+                            currentDuration += 1;
+                        }
+
                         // Sprawdzenie czy wyzwanie zostało ukończone
-                        const totalDays = c.duration;
-                        let completedCount = 0;
-                        for(let i=1; i<=totalDays; i++) {
-                            if(updatedLogs[i] && updatedLogs[i].status === 'green') completedCount++;
+                        let greenCount = 0;
+                        for(let i=1; i<=currentDuration; i++) {
+                            if(updatedLogs[i] && updatedLogs[i].status === 'green') greenCount++;
                         }
 
                         let newStatus = c.status;
-                        if (completedCount >= totalDays) {
+                        if (greenCount >= c.duration) {
                             newStatus = 'completed';
                             setTimeout(triggerFireworks, 300);
                         }
 
-                        const updated = { ...c, logs: updatedLogs, status: newStatus };
+                        const updated = { ...c, duration: currentDuration, logs: updatedLogs, status: newStatus };
                         setSelectedChallenge(updated);
                         return updated;
                     }
@@ -294,7 +283,6 @@
                                 </div>
                             ) : (
                                 filteredChallenges.map(challenge => {
-                                    // Obliczanie postępu
                                     const loggedDays = Object.keys(challenge.logs);
                                     const greenDays = loggedDays.filter(d => challenge.logs[d].status === 'green').length;
                                     const progressPercent = Math.round((greenDays / challenge.duration) * 100);
@@ -428,7 +416,6 @@
                                                         const existing = selectedChallenge.logs[dayNum] || {};
                                                         setAuditStatus(existing.status || 'green');
                                                         setAuditNote(existing.note || '');
-                                                        setAuditPhoto(existing.photo || null);
                                                         const checks = {};
                                                         if (existing.checked) {
                                                             existing.checked.forEach((val, i) => checks[i] = val);
@@ -511,7 +498,6 @@
                                     <button onClick={() => setActiveLogDay(null)} className="w-8 h-8 rounded-full bg-gray-100 text-gray-500 flex items-center justify-center font-bold">✕</button>
                                 </div>
 
-                                {/* Wybór statusu */}
                                 <label className="text-xs font-bold text-gray-600 mb-2 block">Status dnia:</label>
                                 <div className="grid grid-cols-2 gap-2 mb-4">
                                     <button 
@@ -536,7 +522,6 @@
                                     </button>
                                 </div>
 
-                                {/* Checklista kryteriów */}
                                 <label className="text-xs font-bold text-gray-600 mb-2 block">Spełnione kryteria:</label>
                                 <div className="space-y-2 mb-4">
                                     {selectedChallenge.criteria.map((criterion, idx) => (
@@ -552,12 +537,11 @@
                                     ))}
                                 </div>
 
-                                {/* Notatka */}
                                 <label className="text-xs font-bold text-gray-600 mb-1 block">Notatka Audytora:</label>
                                 <textarea 
                                     value={auditNote}
                                     onChange={(e) => setAuditNote(e.target.value)}
-                                    placeholder="Wpisz komentarz (np. Super robota, ale pod łóżkiem został papierek)..."
+                                    placeholder="Wpisz komentarz..."
                                     className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-xs focus:outline-none focus:border-primary mb-4 h-20 resize-none"
                                 />
 
@@ -583,7 +567,7 @@
                                 <input 
                                     type="text"
                                     required
-                                    placeholder="np. Nowa suszarka, 30 dni bez cukru..."
+                                    placeholder="np. Nowa suszarka..."
                                     value={newTitle}
                                     onChange={(e) => setNewTitle(e.target.value)}
                                     className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-xs focus:outline-none focus:border-primary mb-3"
@@ -600,7 +584,7 @@
                                         />
                                     </div>
                                     <div>
-                                        <label className="text-xs font-bold text-gray-600 mb-1 block">Liczba dni ($N$):</label>
+                                        <label className="text-xs font-bold text-gray-600 mb-1 block">Liczba dni (N):</label>
                                         <input 
                                             type="number"
                                             min="1"
@@ -635,7 +619,7 @@
                                     </div>
                                 </div>
 
-                                <label className="text-xs font-bold text-gray-600 mb-1 block">Kryteria oceny (co ma być zrobione):</label>
+                                <label className="text-xs font-bold text-gray-600 mb-1 block">Kryteria oceny:</label>
                                 <div className="space-y-2 mb-4">
                                     {newCriteria.map((crit, idx) => (
                                         <div key={idx} className="flex space-x-2">
