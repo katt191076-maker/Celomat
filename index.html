@@ -39,6 +39,8 @@
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Supabase JS Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <!-- Canvas Confetti dla fajerwerków -->
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
 </head>
@@ -47,38 +49,25 @@
     <div id="root" class="w-full max-w-md h-[100vh] sm:h-[855px] sm:rounded-[40px] sm:shadow-2xl bg-white overflow-hidden flex flex-col relative border border-gray-200"></div>
 
     <script type="text/babel">
+        // ==========================================
+        // KONFIGURACJA SUPABASE (Zintegrowana)
+        // ==========================================
+        const SUPABASE_URL = 'https://kdklpiepaawtegopuamo.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_YtI_JT5ZVc-WD0Jzz6lsgw_gWC7zswl';
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
         function App() {
             const [currentProfile, setCurrentProfile] = React.useState('Mama');
             const [activeTab, setActiveTab] = React.useState('active');
             const [filterView, setFilterView] = React.useState('all');
             
-            const [challenges, setChallenges] = React.useState([
-                {
-                    id: 1,
-                    title: 'Nowa suszarka',
-                    emoji: '💇‍♀️',
-                    duration: 14,
-                    mode: 'streak',
-                    type: 'audited', 
-                    auditedBy: 'Córka',
-                    auditor: 'Mama',
-                    criteria: ['Łóżko pościelone', 'Biurko i podłoga czyste', 'Brak ubrań na krześle', 'Pokój wywietrzony'],
-                    status: 'active',
-                    logs: {
-                        1: { status: 'green', note: 'Świetny początek!', checked: [true, true, true, true] },
-                        2: { status: 'green', note: 'Super porządek', checked: [true, true, true, true] }
-                    },
-                    cheers: [
-                        { id: 1, author: 'Mama', text: 'Bądź grzeczna, suszarka czeka! 🔥', time: 'Wczoraj 20:15' }
-                    ]
-                }
-            ]);
+            const [challenges, setChallenges] = React.useState([]);
+            const [loading, setLoading] = React.useState(true);
 
             const [showCreateModal, setShowCreateModal] = React.useState(false);
             const [selectedChallenge, setSelectedChallenge] = React.useState(null);
             const [activeLogDay, setActiveLogDay] = React.useState(null);
             
-            // Stany formularza nowego wyzwania
             const [newTitle, setNewTitle] = React.useState('');
             const [newEmoji, setNewEmoji] = React.useState('🎯');
             const [newDuration, setNewDuration] = React.useState(14);
@@ -92,117 +81,161 @@
             const [auditCheckedCriteria, setAuditCheckedCriteria] = React.useState({});
             const [newCheerText, setNewCheerText] = React.useState('');
 
+            const fetchChallenges = async () => {
+                setLoading(true);
+                const { data, error } = await supabaseClient.from('challenges').select('*').order('id', { ascending: false });
+                if (error) {
+                    console.error('Błąd pobierania danych:', error);
+                } else if (data) {
+                    const formatted = data.map(item => ({
+                        id: item.id,
+                        title: item.title,
+                        emoji: item.emoji,
+                        duration: item.duration,
+                        mode: item.mode,
+                        auditedBy: item.audited_by,
+                        auditor: item.auditor,
+                        criteria: item.criteria || [],
+                        status: item.status,
+                        logs: item.logs || {},
+                        cheers: item.cheers || []
+                    }));
+                    setChallenges(formatted);
+                }
+                setLoading(false);
+            };
+
+            React.useEffect(() => {
+                fetchChallenges();
+
+                const channel = supabaseClient
+                    .channel('public:challenges')
+                    .on('postgres_changes', { event: '*', schema: 'public', table: 'challenges' }, () => {
+                        fetchChallenges();
+                    })
+                    .subscribe();
+
+                return () => {
+                    supabaseClient.removeChannel(channel);
+                };
+            }, []);
+
             const triggerFireworks = () => {
                 if (typeof confetti === 'function') {
                     confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } });
                 }
             };
 
-            const handleCreateChallenge = (e) => {
+            const handleCreateChallenge = async (e) => {
                 e.preventDefault();
                 if (!newTitle.trim()) return;
 
                 const validCriteria = newCriteria.filter(c => c.trim() !== '');
-                const challenge = {
-                    id: Date.now(),
+                const newObj = {
                     title: newTitle.trim(),
                     emoji: newEmoji.trim() || '🎯',
                     duration: parseInt(newDuration) || 7,
                     mode: newMode,
-                    type: 'audited',
-                    auditedBy: newAuditedBy,
-                    auditor: newAuditor,
+                    audited_by: newAuditedBy.trim() || 'Ktoś',
+                    auditor: newAuditor.trim() || 'Audytor',
                     criteria: validCriteria.length > 0 ? validCriteria : ['Główne zadanie'],
                     status: 'active',
                     logs: {},
                     cheers: []
                 };
 
-                setChallenges([challenge, ...challenges]);
-                setShowCreateModal(false);
-                
-                // Reset formularza
-                setNewTitle('');
-                setNewEmoji('🎯');
-                setNewDuration(14);
-                setNewMode('streak');
-                setNewAuditedBy('Córka');
-                setNewAuditor('Mama');
-                setNewCriteria(['Kryterium 1', 'Kryterium 2']);
+                const { error } = await supabaseClient.from('challenges').insert([newObj]).select();
+                if (error) {
+                    alert('Błąd podczas zapisywania w chmurze: ' + error.message);
+                } else {
+                    setShowCreateModal(false);
+                    setNewTitle('');
+                    setNewEmoji('🎯');
+                    setNewDuration(14);
+                    fetchChallenges();
+                }
             };
 
-            const saveAudit = () => {
+            const saveAudit = async () => {
                 if (!selectedChallenge || activeLogDay === null) return;
 
-                const updatedChallenges = challenges.map(c => {
-                    if (c.id === selectedChallenge.id) {
-                        let updatedLogs = { ...c.logs };
-                        
-                        updatedLogs[activeLogDay] = {
-                            status: auditStatus,
-                            note: auditNote,
-                            checked: selectedChallenge.criteria.map((_, idx) => !!auditCheckedCriteria[idx])
-                        };
+                let updatedLogs = { ...selectedChallenge.logs };
+                updatedLogs[activeLogDay] = {
+                    status: auditStatus,
+                    note: auditNote,
+                    checked: selectedChallenge.criteria.map((_, idx) => !!auditCheckedCriteria[idx])
+                };
 
-                        let currentDuration = c.duration;
-                        if (c.mode === 'streak' && auditStatus === 'red') {
-                            currentDuration += 1;
-                        }
+                let currentDuration = selectedChallenge.duration;
+                if (selectedChallenge.mode === 'streak' && auditStatus === 'red') {
+                    currentDuration += 1;
+                }
 
-                        let greenCount = 0;
-                        for(let i=1; i<=currentDuration; i++) {
-                            if(updatedLogs[i] && updatedLogs[i].status === 'green') greenCount++;
-                        }
+                let greenCount = 0;
+                for(let i=1; i<=currentDuration; i++) {
+                    if(updatedLogs[i] && updatedLogs[i].status === 'green') greenCount++;
+                }
 
-                        let newStatus = c.status;
-                        if (greenCount >= c.duration) {
-                            newStatus = 'completed';
-                            setTimeout(triggerFireworks, 300);
-                        }
+                let newStatus = selectedChallenge.status;
+                if (greenCount >= selectedChallenge.duration) {
+                    newStatus = 'completed';
+                    setTimeout(triggerFireworks, 300);
+                }
 
-                        const updated = { ...c, duration: currentDuration, logs: updatedLogs, status: newStatus };
-                        setSelectedChallenge(updated);
-                        return updated;
-                    }
-                    return c;
-                });
+                const { error } = await supabaseClient
+                    .from('challenges')
+                    .update({
+                        duration: currentDuration,
+                        logs: updatedLogs,
+                        status: newStatus
+                    })
+                    .eq('id', selectedChallenge.id);
 
-                setChallenges(updatedChallenges);
-                setActiveLogDay(null);
+                if (error) {
+                    alert('Błąd zapisu audytu: ' + error.message);
+                } else {
+                    setActiveLogDay(null);
+                    setSelectedChallenge(null);
+                    fetchChallenges();
+                }
             };
 
-            const clearAuditDay = () => {
+            const clearAuditDay = async () => {
                 if (!selectedChallenge || activeLogDay === null) return;
 
-                const updatedChallenges = challenges.map(c => {
-                    if (c.id === selectedChallenge.id) {
-                        let updatedLogs = { ...c.logs };
-                        delete updatedLogs[activeLogDay];
+                let updatedLogs = { ...selectedChallenge.logs };
+                delete updatedLogs[activeLogDay];
 
-                        const updated = { ...c, logs: updatedLogs };
-                        setSelectedChallenge(updated);
-                        return updated;
-                    }
-                    return c;
-                });
+                const { error } = await supabaseClient
+                    .from('challenges')
+                    .update({ logs: updatedLogs })
+                    .eq('id', selectedChallenge.id);
 
-                setChallenges(updatedChallenges);
-                setActiveLogDay(null);
+                if (!error) {
+                    setActiveLogDay(null);
+                    setSelectedChallenge(null);
+                    fetchChallenges();
+                }
             };
 
-            const addCheer = (challengeId) => {
+            const addCheer = async (challengeId) => {
                 if (!newCheerText.trim()) return;
-                const updated = challenges.map(c => {
-                    if (c.id === challengeId) {
-                        const newCheers = [...c.cheers, { id: Date.now(), author: currentProfile, text: newCheerText, time: 'Przed chwilą' }];
-                        const updatedCh = { ...c, cheers: newCheers };
-                        if(selectedChallenge && selectedChallenge.id === challengeId) setSelectedChallenge(updatedCh);
-                        return updatedCh;
-                    }
-                    return c;
-                });
-                setChallenges(updated);
-                setNewCheerText('');
+                const target = challenges.find(c => c.id === challengeId);
+                if (!target) return;
+
+                const newCheers = [...target.cheers, { id: Date.now(), author: currentProfile, text: newCheerText.trim(), time: 'Przed chwilą' }];
+
+                const { error } = await supabaseClient
+                    .from('challenges')
+                    .update({ cheers: newCheers })
+                    .eq('id', challengeId);
+
+                if (!error) {
+                    setNewCheerText('');
+                    fetchChallenges();
+                    const updatedTarget = { ...target, cheers: newCheers };
+                    setSelectedChallenge(updatedTarget);
+                }
             };
 
             const filteredChallenges = challenges.filter(c => {
@@ -210,9 +243,9 @@
                 if (!matchesTab) return false;
 
                 if (filterView === 'mine') {
-                    return c.auditedBy === currentProfile;
+                    return c.auditedBy.toLowerCase() === currentProfile.toLowerCase();
                 } else if (filterView === 'assigned') {
-                    return c.auditor === currentProfile && c.auditedBy !== currentProfile;
+                    return c.auditor.toLowerCase() === currentProfile.toLowerCase() && c.auditedBy.toLowerCase() !== currentProfile.toLowerCase();
                 }
                 return true;
             });
@@ -228,21 +261,18 @@
                             </div>
                             <div>
                                 <h1 className="font-bold text-lg text-dark tracking-tight leading-none">Celomat</h1>
-                                <span className="text-xs text-gray-400 font-medium">Strefa Motywacji</span>
+                                <span className="text-xs text-gray-400 font-medium">Chmura Supabase ☁️</span>
                             </div>
                         </div>
 
-                        <div className="flex bg-gray-100 p-1 rounded-full border border-gray-200">
-                            <button 
-                                onClick={() => setCurrentProfile('Mama')}
-                                className={`px-3 py-1 rounded-full text-xs font-bold transition-all ${currentProfile === 'Mama' ? 'bg-primary text-white shadow-sm' : 'text-gray-500'}`}>
-                                Mama 👩
-                            </button>
-                            <button 
-                                onClick={() => setCurrentProfile('Córka')}
-                                className={`px-3 py-1 rounded-full text-xs font-bold transition-all ${currentProfile === 'Córka' ? 'bg-secondary text-white shadow-sm' : 'text-gray-500'}`}>
-                                Córka 👧
-                            </button>
+                        <div className="flex items-center space-x-2">
+                            <span className="text-xs text-gray-500 font-medium">Ty:</span>
+                            <input 
+                                type="text"
+                                value={currentProfile}
+                                onChange={(e) => setCurrentProfile(e.target.value)}
+                                className="w-24 bg-gray-100 border border-gray-200 rounded-lg px-2 py-1 text-xs font-bold text-dark text-center focus:outline-none focus:border-primary"
+                            />
                         </div>
                     </div>
 
@@ -278,18 +308,20 @@
                                 Moje cele ({currentProfile})
                             </button>
                             <button onClick={() => setFilterView('assigned')} className={`px-3 py-1.5 rounded-lg font-medium whitespace-nowrap ${filterView === 'assigned' ? 'bg-indigo-50 text-indigo-600 border border-indigo-200' : 'bg-white text-gray-500 border border-gray-200'}`}>
-                                Do oceny jako Audytor
+                                Jako Audytor
                             </button>
                         </div>
 
-                        <div className="space-y-3">
-                            {filteredChallenges.length === 0 ? (
-                                <div className="text-center py-12 bg-white rounded-3xl border border-dashed border-gray-200 p-6">
-                                    <div className="text-4xl mb-2">📭</div>
-                                    <p className="text-gray-500 font-medium text-sm">Brak wyzwań w tej zakładce.</p>
-                                </div>
-                            ) : (
-                                filteredChallenges.map(challenge => {
+                        {loading ? (
+                            <div className="text-center py-12 text-gray-400 text-xs">Ładowanie danych z chmury...</div>
+                        ) : filteredChallenges.length === 0 ? (
+                            <div className="text-center py-12 bg-white rounded-3xl border border-dashed border-gray-200 p-6">
+                                <div className="text-4xl mb-2">📭</div>
+                                <p className="text-gray-500 font-medium text-sm">Brak wyzwań w tej zakładce.</p>
+                            </div>
+                        ) : (
+                            <div className="space-y-3">
+                                {filteredChallenges.map(challenge => {
                                     const loggedDays = Object.keys(challenge.logs);
                                     const greenDays = loggedDays.filter(d => challenge.logs[d].status === 'green').length;
                                     const progressPercent = Math.round((greenDays / challenge.duration) * 100);
@@ -350,9 +382,9 @@
                                             </div>
                                         </div>
                                     );
-                                })
-                            )}
-                        </div>
+                                })}
+                            </div>
+                        )}
 
                     </div>
 
@@ -378,7 +410,7 @@
                                         <span className="text-3xl">{selectedChallenge.emoji}</span>
                                         <div>
                                             <h2 className="font-extrabold text-xl text-dark">{selectedChallenge.title}</h2>
-                                            <p className="text-xs text-gray-400">Tryb: {selectedChallenge.mode === 'streak' ? 'Ciągły (Streak)' : 'Suma dni'}</p>
+                                            <p className="text-xs text-gray-400">Audytor: {selectedChallenge.auditor} | Realizuje: {selectedChallenge.auditedBy}</p>
                                         </div>
                                     </div>
                                     <button 
@@ -402,40 +434,30 @@
                                             else if (log.status === 'blue') { bg = 'bg-blue-400 border-blue-500 text-white'; icon = '💤'; }
                                         }
 
-                                        const canAudit = currentProfile === selectedChallenge.auditor;
-
                                         return (
                                             <div 
                                                 key={idx}
                                                 onClick={() => {
-                                                    if (canAudit) {
-                                                        setActiveLogDay(dayNum);
-                                                        const existing = selectedChallenge.logs[dayNum] || {};
-                                                        setAuditStatus(existing.status || 'green');
-                                                        setAuditNote(existing.note || '');
-                                                        
-                                                        const checks = {};
-                                                        if (existing.checked && Array.isArray(existing.checked)) {
-                                                            existing.checked.forEach((val, i) => { checks[i] = val; });
-                                                        } else {
-                                                            selectedChallenge.criteria.forEach((_, i) => { checks[i] = false; });
-                                                        }
-                                                        setAuditCheckedCriteria(checks);
+                                                    setActiveLogDay(dayNum);
+                                                    const existing = selectedChallenge.logs[dayNum] || {};
+                                                    setAuditStatus(existing.status || 'green');
+                                                    setAuditNote(existing.note || '');
+                                                    
+                                                    const checks = {};
+                                                    if (existing.checked && Array.isArray(existing.checked)) {
+                                                        existing.checked.forEach((val, i) => { checks[i] = val; });
+                                                    } else {
+                                                        selectedChallenge.criteria.forEach((_, i) => { checks[i] = false; });
                                                     }
+                                                    setAuditCheckedCriteria(checks);
                                                 }}
-                                                className={`p-3 rounded-2xl border flex flex-col items-center justify-center transition-all ${bg} ${canAudit ? 'cursor-pointer hover:opacity-90 active:scale-95 shadow-xs' : 'opacity-90'}`}>
+                                                className={`p-3 rounded-2xl border flex flex-col items-center justify-center transition-all cursor-pointer hover:opacity-90 active:scale-95 shadow-xs ${bg}`}>
                                                 <span className="text-xs font-bold">Dzień {dayNum}</span>
                                                 <span className="text-lg font-extrabold mt-0.5">{icon}</span>
                                             </div>
                                         );
                                     })}
                                 </div>
-
-                                {currentProfile === selectedChallenge.auditor && (
-                                    <p className="text-[11px] text-indigo-600 font-medium bg-indigo-50 p-2.5 rounded-xl text-center mb-4">
-                                        💡 Kliknij w dowolny kafelek powyżej, aby edytować lub wyczyścić ocenę dnia.
-                                    </p>
-                                )}
 
                                 <div className="bg-gray-50 p-4 rounded-2xl mb-6 border border-gray-100">
                                     <h4 className="font-bold text-xs text-gray-500 uppercase tracking-wider mb-2">Kryteria oceny</h4>
@@ -552,7 +574,7 @@
                                     <button 
                                         onClick={saveAudit}
                                         className="w-2/3 bg-primary hover:bg-opacity-90 text-white py-3.5 rounded-2xl font-bold text-sm shadow-md transition-transform active:scale-95">
-                                        Zapisz zmiany
+                                        Zapisz w chmurze ☁️
                                     </button>
                                 </div>
                             </div>
@@ -603,24 +625,24 @@
 
                                 <div className="grid grid-cols-2 gap-3 mb-3">
                                     <div>
-                                        <label className="text-xs font-bold text-gray-600 mb-1 block">Realizuje:</label>
-                                        <select 
+                                        <label className="text-xs font-bold text-gray-600 mb-1 block">Realizuje (Kto?):</label>
+                                        <input 
+                                            type="text"
+                                            required
                                             value={newAuditedBy}
                                             onChange={(e) => setNewAuditedBy(e.target.value)}
-                                            className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-xs font-bold focus:outline-none focus:border-primary">
-                                            <option value="Mama">Mama</option>
-                                            <option value="Córka">Córka</option>
-                                        </select>
+                                            className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-xs font-bold focus:outline-none focus:border-primary"
+                                        />
                                     </div>
                                     <div>
-                                        <label className="text-xs font-bold text-gray-600 mb-1 block">Audytor:</label>
-                                        <select 
+                                        <label className="text-xs font-bold text-gray-600 mb-1 block">Audytor (Kto?):</label>
+                                        <input 
+                                            type="text"
+                                            required
                                             value={newAuditor}
                                             onChange={(e) => setNewAuditor(e.target.value)}
-                                            className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-xs font-bold focus:outline-none focus:border-primary">
-                                            <option value="Mama">Mama</option>
-                                            <option value="Córka">Córka</option>
-                                        </select>
+                                            className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-xs font-bold focus:outline-none focus:border-primary"
+                                        />
                                     </div>
                                 </div>
 
@@ -659,7 +681,7 @@
                                 <button 
                                     type="submit"
                                     className="w-full bg-primary hover:bg-opacity-90 text-white py-3.5 rounded-2xl font-bold text-sm shadow-md transition-transform active:scale-95">
-                                    Uruchom Celomat! 🚀
+                                    Uruchom w Chmurze! 🚀
                                 </button>
                             </form>
                         </div>
